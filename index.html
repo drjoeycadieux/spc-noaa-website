@@ -2,14 +2,15 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Prévisions Météo Sévères - Canada - US</title>
+    <title>Alertes Météo et Géomatique - SPC / NEXRAD / IGO</title>
     <meta
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
     />
 
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
     <link
-      href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css"
+      href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css"
       rel="stylesheet"
     />
 
@@ -25,23 +26,20 @@
       body {
         margin: 0;
         padding: 0;
-        /* Utilisation de la nouvelle police moderne */
         font-family: "Roboto", sans-serif;
         display: flex;
         flex-direction: column;
         height: 100vh;
-        /* Fond légèrement décalé */
         background-color: #f0f2f5;
       }
 
       /* --- Style de l'En-tête (Header) --- */
       header {
-        /* Couleur plus foncée et moderne */
         background-color: #1a237e;
         color: white;
-        padding: 18px 30px; /* Plus d'espace */
+        padding: 18px 30px;
         font-size: 1.6em;
-        font-weight: 700; /* Utilisation d'un poids de police plus lourd */
+        font-weight: 700;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         z-index: 10;
         display: flex;
@@ -56,15 +54,14 @@
         margin-left: 20px;
         font-size: 0.85em;
         padding: 8px 14px;
-        /* Look 'flat' sans bordure, juste un hover */
         border: none;
-        border-radius: 6px; /* Coins légèrement arrondis */
+        border-radius: 6px;
         transition: background-color 0.2s;
         font-weight: 400;
       }
 
       .header-links a:hover {
-        background-color: #3f51b5; /* Bleu plus clair au survol */
+        background-color: #3f51b5;
       }
 
       /* Conteneur principal */
@@ -76,22 +73,21 @@
 
       /* --- Style de la Barre Latérale (Sidebar) --- */
       #sidebar {
-        width: 320px; /* Légèrement plus large */
+        width: 320px;
         background-color: white;
         padding: 25px;
         overflow-y: auto;
-        /* Ombre plus douce et plus moderne */
         box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
         z-index: 5;
-        border-right: none; /* Supprimer la ligne de séparation */
+        border-right: none;
       }
 
       /* Style de la Légende et des titres */
       #sidebar h3,
       #sidebar h4 {
         margin-top: 0;
-        color: #1a237e; /* Utiliser la couleur de l'en-tête pour le contraste */
-        border-bottom: 1px solid #e0e0e0; /* Ligne plus fine */
+        color: #1a237e;
+        border-bottom: 1px solid #e0e0e0;
         padding-bottom: 8px;
         margin-bottom: 20px;
         font-weight: 700;
@@ -106,17 +102,17 @@
 
       /* Style du bouton Player */
       #play-button {
-        background-color: #4caf50; /* Couleur verte pour l'action */
+        background-color: #4caf50;
         color: white;
         border: none;
         padding: 12px 20px;
-        border-radius: 8px; /* Plus arrondi */
+        border-radius: 8px;
         cursor: pointer;
         font-size: 1.05em;
         font-weight: 700;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         transition: background-color 0.3s, transform 0.1s;
-        width: 100%; /* S'étend sur toute la largeur */
+        width: 100%;
       }
 
       #play-button:hover {
@@ -131,14 +127,13 @@
       #map {
         flex: 1;
         position: relative;
-        /* S'assurer que les coins ne sont pas arrondis, mais la carte est plus intégrée */
       }
 
       /* Styles de la légende pour les alertes SPC */
       .legend-item {
         display: flex;
         align-items: center;
-        margin-bottom: 12px; /* Plus d'espace vertical */
+        margin-bottom: 12px;
         font-size: 0.95em;
       }
       .legend-color {
@@ -146,8 +141,8 @@
         height: 25px;
         margin-right: 15px;
         border: 2px solid #000;
-        opacity: 0.7; /* Légère opacité */
-        border-radius: 4px; /* Adoucir les carrés */
+        opacity: 0.7;
+        border-radius: 4px;
       }
 
       /* Style pour le séparateur horizontal */
@@ -160,7 +155,7 @@
   </head>
   <body>
     <header>
-      <div>Prévisions Météo Sévères - Canada | USA</div>
+      <div>Alertes Météo et Géomatique - SPC / NEXRAD / IGO</div>
 
       <div class="header-links">
         <a href="https://github.com/drjoeycadieux" target="_blank">
@@ -177,25 +172,27 @@
         <h3>Légende des Alertes SPC</h3>
         <div class="legend-item">
           <div class="legend-color" style="background-color: #ffff00"></div>
-          <span>1 - Marginal Risk</span>
+          <span>1 - Marginal Risk (Risque Marginal)</span>
         </div>
         <div class="legend-item">
           <div class="legend-color" style="background-color: #ffa500"></div>
-          <span>2 - Slight Risk</span>
+          <span>2 - Slight Risk (Risque Léger)</span>
         </div>
         <div class="legend-item">
           <div class="legend-color" style="background-color: #ff4500"></div>
-          <span>3 - Enhanced / Moderate Risk</span>
+          <span>3 - Enhanced / Moderate Risk (Risque Modéré/Amélioré)</span>
         </div>
         <div class="legend-item">
           <div class="legend-color" style="background-color: #ff0000"></div>
-          <span>4 - High Risk</span>
+          <span>4 - High Risk (Risque Élevé)</span>
         </div>
 
         <hr />
 
         <h4>Couches Actives</h4>
         <ul>
+          <li>**IGO Fond de Carte** (Base Topo Québec)</li>
+          <li>**IGO Événements Historiques** (GeoJSON)</li>
           <li>Radar NEXRAD (Couche Raster)</li>
           <li>Prévisions SPC NOAA (GeoJSON)</li>
         </ul>
@@ -220,21 +217,18 @@
       <div id="map"></div>
     </div>
 
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
-
     <script>
       // ----------------------------------------------------------------
       // Configuration de base
       // ----------------------------------------------------------------
+      // ** IMPORTANT : REMPLACEZ CECI PAR VOTRE VRAI JETON D'ACCÈS MAPBOX **
       mapboxgl.accessToken =
         "pk.eyJ1Ijoiam9leWNyZWF0b3IiLCJhIjoiY21pNTA0ZW5tMmNobDJrb2xnZHMzdGZ0biJ9.Ohr-h7iBEDpvKTJUl2S9AQ";
 
       const map = new mapboxgl.Map({
         container: "map",
-        // Suggestion : utiliser un style Mapbox plus moderne comme "dark-v11" pour un look pro
-        // style: "mapbox://styles/mapbox/dark-v11",
-        style: "mapbox://styles/mapbox/dark-v11",
-        center: [-95.7129, 37.0902],
+        style: "mapbox://styles/mapbox/standard",
+        center: [-75.0, 42.0],
         zoom: 4,
         attributionControl: false,
       });
@@ -243,7 +237,7 @@
       map.addControl(
         new mapboxgl.AttributionControl({
           compact: true,
-          customAttribution: "Données supplémentaires: SPC NOAA / NEXRAD",
+          customAttribution: "Données: SPC NOAA / NEXRAD / IGO Québec (MSP)",
         }),
         "top-right"
       );
@@ -252,7 +246,102 @@
       // Chargement des données
       // ----------------------------------------------------------------
       map.on("load", () => {
-        // --- 1. COUCHE RADAR NEXRAD (Raster) ---
+        // ================================================================
+        // === COUCHES IGO (QUÉBEC) ===
+        // ================================================================
+
+        // --- IGO 1. FOND DE CARTE TOPOGRAPHIQUE PUBLIC (TMS) - CORRIGÉ ---
+        map.addSource("igo-base-map", {
+          type: "raster",
+          tiles: [
+            "https://geoegl.msp.gouv.qc.ca/carto/tms/1.0.0/carte_gouv_qc_public@EPSG_3857/{z}/{x}/{y}.png",
+          ],
+          // Correction pour l'erreur 404: Mapbox gère l'inversion de l'axe Y pour le service TMS
+          scheme: "tms",
+          tileSize: 256,
+          minzoom: 0,
+          maxzoom: 18,
+          attribution: "Fond de carte IGO: Gouvernement du Québec",
+        });
+
+        map.addLayer({
+          id: "igo-base-layer",
+          type: "raster",
+          source: "igo-base-map",
+          beforeId: "waterway-label",
+          paint: {
+            "raster-opacity": 0.8,
+          },
+        });
+
+        // --- NOUVELLE COUCHE 2. IGO ÉVÉNEMENTS HISTORIQUES (GeoJSON WFS) ---
+        const historiqueEventsUrl =
+          "https://geoegl.msp.gouv.qc.ca/apis/wss/historiquesc.fcgi?service=wfs&version=1.1.0&request=getfeature&typename=msp_risc_evenements_public&outputformat=geojson&srsName=epsg:4326";
+
+        map.addSource("historique-events-source", {
+          type: "geojson",
+          data: historiqueEventsUrl,
+          attribution: "Événements Historiques: MSP (IGO)",
+        });
+
+        // Visualisation des événements historiques (points)
+        map.addLayer({
+          id: "historique-events-circle",
+          type: "circle",
+          source: "historique-events-source",
+          paint: {
+            "circle-color": "#800080", // Violet pour les données historiques
+            "circle-radius": 6,
+            "circle-stroke-width": 1.5,
+            "circle-stroke-color": "#ffffff",
+            "circle-opacity": 0.8,
+          },
+          // Placé sous le radar et les alertes météo
+          beforeId: "nexrad-image",
+        });
+
+        // Ajout de l'interactivité pour les événements historiques
+        map.on("click", "historique-events-circle", (e) => {
+          const properties = e.features[0].properties;
+          let description = "<strong>Événement Historique MSP</strong><br>";
+
+          // Construit le contenu du popup
+          for (const key in properties) {
+            if (
+              properties.hasOwnProperty(key) &&
+              properties[key] !== null &&
+              key !== "geom"
+            ) {
+              // Limiter l'affichage des valeurs trop longues
+              const value =
+                typeof properties[key] === "string" &&
+                properties[key].length > 100
+                  ? properties[key].substring(0, 100) + "..."
+                  : properties[key];
+
+              description += `<strong>${key}</strong>: ${value}<br>`;
+            }
+          }
+
+          new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(description)
+            .addTo(map);
+        });
+
+        map.on("mouseenter", "historique-events-circle", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+
+        map.on("mouseleave", "historique-events-circle", () => {
+          map.getCanvas().style.cursor = "";
+        });
+
+        // ================================================================
+        // === COUCHES MÉTÉO (USA) - CODE EXISTANT ===
+        // ================================================================
+
+        // --- 3. COUCHE RADAR NEXRAD (Raster) ---
 
         const radarTileUrl =
           "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png";
@@ -276,7 +365,7 @@
           },
         });
 
-        // --- 2. COUCHE SPC NOAA (GeoJSON) ---
+        // --- 4. COUCHE SPC NOAA (GeoJSON) ---
 
         map.addSource("spc-outlook", {
           type: "geojson",
@@ -301,6 +390,7 @@
           id: "spc-polygons",
           type: "fill",
           source: "spc-outlook",
+          beforeId: "waterway-label",
           paint: {
             "fill-color": spcColors,
             "fill-opacity": 0.6,
@@ -319,7 +409,7 @@
           },
         });
 
-        // --- 3. Interactivité : Popup et Curseur (GeoJSON) ---
+        // --- 5. Interactivité : Popup et Curseur (GeoJSON SPC) ---
 
         map.on("click", "spc-polygons", (e) => {
           const properties = e.features[0].properties;
@@ -341,7 +431,7 @@
           map.getCanvas().style.cursor = "";
         });
 
-        // --- 4. Fonction d'Animation (Player) ---
+        // --- 6. Fonction d'Animation (Player) ---
 
         document
           .getElementById("play-button")
