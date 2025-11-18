@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Prévisions Météo Sévères - SPC NOAA / Radar NEXRAD</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* CSS de base */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* --- Style de l'En-tête (Header) --- */
+      header {
+        background-color: #333;
+        color: white;
+        padding: 15px 20px;
+        font-size: 1.5em;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+        /* Propriétés pour aligner le titre et les boutons */
+        display: flex; /* Active Flexbox */
+        justify-content: space-between; /* Espace les éléments aux extrémités */
+        align-items: center; /* Centre verticalement */
+      }
+
+      /* Conteneur des boutons de l'en-tête */
+      .header-links a {
+        color: white;
+        text-decoration: none;
+        margin-left: 15px; /* Espace entre les boutons */
+        font-size: 0.8em; /* Plus petit que le titre */
+        padding: 5px 10px;
+        border: 1px solid white;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+      }
+
+      .header-links a:hover {
+        background-color: #555;
+      }
+
+      /* Conteneur principal */
+      #main-container {
+        display: flex;
+        flex: 1;
+        position: relative;
+      }
+
+      /* --- Style de la Barre Latérale (Sidebar) --- */
+      #sidebar {
+        width: 300px;
+        background-color: #f4f4f4;
+        padding: 20px;
+        overflow-y: auto;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        z-index: 5;
+        border-right: 1px solid #ccc;
+      }
+
+      /* Style de la Légende */
+      #sidebar h3 {
+        margin-top: 0;
+        color: #333;
+        border-bottom: 2px solid #ccc;
+        padding-bottom: 5px;
+        margin-bottom: 15px;
+      }
+
+      /* Style du bouton Player */
+      #play-button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background-color 0.3s;
+      }
+
+      #play-button:hover {
+        background-color: #0056b3;
+      }
+
+      /* --- Style de la Carte (Map) --- */
+      #map {
+        flex: 1;
+        position: relative;
+      }
+
+      /* Styles de la légende pour les alertes SPC */
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+        border: 1px solid #000;
+        opacity: 0.6;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>Prévisions Météo Sévères - SPC NOAA / Radar NEXRAD</div>
+
+      <div class="header-links">
+        <a href="https://github.com/drjoeycadieux" target="_blank">
+          <span role="img" aria-label="GitHub">🐙</span> GitHub
+        </a>
+        <a href="https://x.com/drjoeycadieux" target="_blank">
+          <span role="img" aria-label="X">🐦‍⬛</span> X
+        </a>
+      </div>
+    </header>
+
+    <div id="main-container">
+      <aside id="sidebar">
+        <h3>Légende des Alertes SPC</h3>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #ffff00"></div>
+          <span>1 - Marginal Risk</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #ffa500"></div>
+          <span>2 - Slight Risk</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #ff4500"></div>
+          <span>3 - Enhanced / Moderate Risk</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #ff0000"></div>
+          <span>4 - High Risk</span>
+        </div>
+
+        <hr />
+
+        <h4>Couches Actives</h4>
+        <ul>
+          <li>Radar NEXRAD (Couche Raster)</li>
+          <li>Prévisions SPC NOAA (GeoJSON)</li>
+        </ul>
+
+        <hr />
+
+        <h4>Contrôle des Données</h4>
+        <button id="play-button">▶️ Démarrer l'Animation</button>
+        <div id="time-display" style="margin-top: 10px; font-weight: bold">
+          Heure : Statique
+        </div>
+      </aside>
+
+      <div id="map"></div>
+    </div>
+
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+
+    <script>
+      // ----------------------------------------------------------------
+      // Configuration de base
+      // ----------------------------------------------------------------
+      mapboxgl.accessToken =
+        "pk.eyJ1Ijoiam9leWNyZWF0b3IiLCJhIjoiY21pNTA0ZW5tMmNobDJrb2xnZHMzdGZ0biJ9.Ohr-h7iBEDpvKTJUl2S9AQ";
+
+      const map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [-95.7129, 37.0902],
+        zoom: 4,
+        attributionControl: false,
+      });
+
+      // Déplacer l'attribution
+      map.addControl(
+        new mapboxgl.AttributionControl({
+          compact: true,
+          customAttribution: "Données supplémentaires: SPC NOAA / NEXRAD",
+        }),
+        "top-right"
+      );
+
+      // ----------------------------------------------------------------
+      // Chargement des données
+      // ----------------------------------------------------------------
+      map.on("load", () => {
+        // --- 1. COUCHE RADAR NEXRAD (Raster) ---
+
+        const radarTileUrl =
+          "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png";
+
+        map.addSource("nexrad-radar", {
+          type: "raster",
+          tiles: [radarTileUrl],
+          tileSize: 256,
+          minzoom: 0,
+          maxzoom: 12,
+          attribution:
+            'Radar: NEXRAD via <a href="https://mesonet.agron.iastate.edu/" target="_blank">Iowa State Mesonet</a>',
+        });
+
+        map.addLayer({
+          id: "nexrad-image",
+          type: "raster",
+          source: "nexrad-radar",
+          paint: {
+            "raster-opacity": 0.8,
+          },
+        });
+
+        // --- 2. COUCHE SPC NOAA (GeoJSON) ---
+
+        map.addSource("spc-outlook", {
+          type: "geojson",
+          data: "https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson",
+        });
+
+        const spcColors = [
+          "match",
+          ["get", "DN"],
+          1,
+          "#FFFF00",
+          2,
+          "#FFA500",
+          3,
+          "#FF4500",
+          4,
+          "#FF0000",
+          "#CCCCCC",
+        ];
+
+        map.addLayer({
+          id: "spc-polygons",
+          type: "fill",
+          source: "spc-outlook",
+          paint: {
+            "fill-color": spcColors,
+            "fill-opacity": 0.6,
+            "fill-outline-color": "#000000",
+          },
+        });
+
+        map.addLayer({
+          id: "spc-lines",
+          type: "line",
+          source: "spc-outlook",
+          layout: {},
+          paint: {
+            "line-color": "#000000",
+            "line-width": 2,
+          },
+        });
+
+        // --- 3. Interactivité : Popup et Curseur (GeoJSON) ---
+
+        map.on("click", "spc-polygons", (e) => {
+          const properties = e.features[0].properties;
+          const description = Object.keys(properties)
+            .map((key) => `<strong>${key}</strong>: ${properties[key]}`)
+            .join("<br>");
+
+          new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(description)
+            .addTo(map);
+        });
+
+        map.on("mouseenter", "spc-polygons", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+
+        map.on("mouseleave", "spc-polygons", () => {
+          map.getCanvas().style.cursor = "";
+        });
+
+        // --- 4. Fonction d'Animation (Player) ---
+
+        document
+          .getElementById("play-button")
+          .addEventListener("click", toggleAnimation);
+
+        let animationInterval = null;
+        let isPlaying = false;
+        const animationSteps = [0.2, 0.4, 0.6, 0.8];
+        let currentStepIndex = 0;
+
+        function toggleAnimation() {
+          const button = document.getElementById("play-button");
+          const display = document.getElementById("time-display");
+
+          if (isPlaying) {
+            clearInterval(animationInterval);
+            isPlaying = false;
+            button.innerHTML = "▶️ Démarrer l'Animation";
+            display.textContent = "Heure : Statique";
+            if (map.getLayer("spc-polygons")) {
+              map.setPaintProperty("spc-polygons", "fill-opacity", 0.6);
+            }
+          } else {
+            isPlaying = true;
+            button.innerHTML = "⏸️ Arrêter l'Animation";
+
+            animationInterval = setInterval(() => {
+              currentStepIndex = (currentStepIndex + 1) % animationSteps.length;
+              const opacity = animationSteps[currentStepIndex];
+              const timeLabel = `Étape ${currentStepIndex + 1} / 4`;
+
+              if (map.getLayer("spc-polygons")) {
+                map.setPaintProperty("spc-polygons", "fill-opacity", opacity);
+              }
+
+              display.textContent = `Heure : ${timeLabel} (Opacité: ${opacity.toFixed(
+                1
+              )})`;
+            }, 500);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
