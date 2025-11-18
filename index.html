@@ -161,7 +161,7 @@
         margin: 20px 0;
       }
 
-      /* --- Footer Style (New) --- */
+      /* --- Footer Style --- */
       footer {
         /* DARK MODE: Matches header/neutral dark */
         background-color: #333333;
@@ -172,6 +172,48 @@
         /* Ensures footer is below main content */
         flex-shrink: 0;
         border-top: 1px solid #444444;
+      }
+
+      /* --- Loading Spinner Styles (NEW) --- */
+      #loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        /* Must cover the map area */
+        z-index: 100;
+        /* Dark background for contrast */
+        background-color: rgba(30, 30, 30, 0.95);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 1.2em;
+        font-weight: 400;
+        /* Initially set to show */
+        transition: opacity 0.3s;
+      }
+
+      /* The actual spinner CSS (using border trick) */
+      .spinner {
+        border: 8px solid #444444; /* Light grey border */
+        border-top: 8px solid #4caf50; /* Green/Accent color for spin */
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
     </style>
   </head>
@@ -237,13 +279,19 @@
         </div>
       </aside>
 
-      <div id="map"></div>
+      <div id="map">
+        <div id="loading-overlay">
+          <div class="spinner"></div>
+          Loading Map and Weather Data...
+        </div>
+      </div>
     </div>
 
     <footer>
       &copy; 2025 Weather and Geomatics Alerts | Data sources via SPC NOAA, Iowa
       State Mesonet (NEXRAD), and IGO Québec (MSP). | For educational use only.
     </footer>
+
     <script>
       // ----------------------------------------------------------------
       // Base Configuration
@@ -274,6 +322,15 @@
       // Data Loading
       // ----------------------------------------------------------------
       map.on("load", () => {
+        // HIDE THE LOADING SPINNER WHEN THE MAP IS READY (NEW)
+        const loadingOverlay = document.getElementById("loading-overlay");
+        // Use opacity transition for a smoother fade-out
+        loadingOverlay.style.opacity = "0";
+        // Remove it completely after the transition
+        setTimeout(() => {
+          loadingOverlay.style.display = "none";
+        }, 300); // Wait for CSS transition (0.3s)
+
         // ================================================================
         // === IGO LAYERS (QUEBEC) ===
         // ================================================================
