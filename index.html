@@ -160,6 +160,19 @@
         border-top: 1px solid #444444;
         margin: 20px 0;
       }
+
+      /* --- Footer Style (New) --- */
+      footer {
+        /* DARK MODE: Matches header/neutral dark */
+        background-color: #333333;
+        color: #ffffff;
+        padding: 12px 30px;
+        text-align: center;
+        font-size: 0.8em;
+        /* Ensures footer is below main content */
+        flex-shrink: 0;
+        border-top: 1px solid #444444;
+      }
     </style>
   </head>
   <body>
@@ -227,6 +240,10 @@
       <div id="map"></div>
     </div>
 
+    <footer>
+      &copy; 2025 Weather and Geomatics Alerts | Data sources via SPC NOAA, Iowa
+      State Mesonet (NEXRAD), and IGO Québec (MSP). | For educational use only.
+    </footer>
     <script>
       // ----------------------------------------------------------------
       // Base Configuration
@@ -238,7 +255,7 @@
       const map = new mapboxgl.Map({
         container: "map",
         // DARK MODE: Switched map style to dark-v11
-        style: "mapbox://styles/mapbox/standard",
+        style: "mapbox://styles/mapbox/dark-v11",
         center: [-75.0, 42.0],
         zoom: 4,
         attributionControl: false,
