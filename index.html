@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Prévisions Météo Sévères - SPC NOAA / Radar NEXRAD</title>
+    <title>Prévisions Météo Sévères - Canada - US</title>
     <meta
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
@@ -13,46 +13,58 @@
       rel="stylesheet"
     />
 
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap"
+      rel="stylesheet"
+    />
+
     <style>
       /* CSS de base */
       body {
         margin: 0;
         padding: 0;
-        font-family: Arial, sans-serif;
+        /* Utilisation de la nouvelle police moderne */
+        font-family: "Roboto", sans-serif;
         display: flex;
         flex-direction: column;
         height: 100vh;
+        /* Fond légèrement décalé */
+        background-color: #f0f2f5;
       }
 
       /* --- Style de l'En-tête (Header) --- */
       header {
-        background-color: #333;
+        /* Couleur plus foncée et moderne */
+        background-color: #1a237e;
         color: white;
-        padding: 15px 20px;
-        font-size: 1.5em;
-        font-weight: bold;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        padding: 18px 30px; /* Plus d'espace */
+        font-size: 1.6em;
+        font-weight: 700; /* Utilisation d'un poids de police plus lourd */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         z-index: 10;
-        /* Propriétés pour aligner le titre et les boutons */
-        display: flex; /* Active Flexbox */
-        justify-content: space-between; /* Espace les éléments aux extrémités */
-        align-items: center; /* Centre verticalement */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
 
       /* Conteneur des boutons de l'en-tête */
       .header-links a {
         color: white;
         text-decoration: none;
-        margin-left: 15px; /* Espace entre les boutons */
-        font-size: 0.8em; /* Plus petit que le titre */
-        padding: 5px 10px;
-        border: 1px solid white;
-        border-radius: 4px;
+        margin-left: 20px;
+        font-size: 0.85em;
+        padding: 8px 14px;
+        /* Look 'flat' sans bordure, juste un hover */
+        border: none;
+        border-radius: 6px; /* Coins légèrement arrondis */
         transition: background-color 0.2s;
+        font-weight: 400;
       }
 
       .header-links a:hover {
-        background-color: #555;
+        background-color: #3f51b5; /* Bleu plus clair au survol */
       }
 
       /* Conteneur principal */
@@ -64,58 +76,85 @@
 
       /* --- Style de la Barre Latérale (Sidebar) --- */
       #sidebar {
-        width: 300px;
-        background-color: #f4f4f4;
-        padding: 20px;
+        width: 320px; /* Légèrement plus large */
+        background-color: white;
+        padding: 25px;
         overflow-y: auto;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        /* Ombre plus douce et plus moderne */
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
         z-index: 5;
-        border-right: 1px solid #ccc;
+        border-right: none; /* Supprimer la ligne de séparation */
       }
 
-      /* Style de la Légende */
-      #sidebar h3 {
+      /* Style de la Légende et des titres */
+      #sidebar h3,
+      #sidebar h4 {
         margin-top: 0;
-        color: #333;
-        border-bottom: 2px solid #ccc;
-        padding-bottom: 5px;
-        margin-bottom: 15px;
+        color: #1a237e; /* Utiliser la couleur de l'en-tête pour le contraste */
+        border-bottom: 1px solid #e0e0e0; /* Ligne plus fine */
+        padding-bottom: 8px;
+        margin-bottom: 20px;
+        font-weight: 700;
+      }
+
+      /* Styles généraux pour les listes */
+      #sidebar ul {
+        padding-left: 20px;
+        margin: 10px 0 20px 0;
+        font-size: 0.95em;
       }
 
       /* Style du bouton Player */
       #play-button {
-        background-color: #007bff;
+        background-color: #4caf50; /* Couleur verte pour l'action */
         color: white;
         border: none;
-        padding: 10px 15px;
-        border-radius: 5px;
+        padding: 12px 20px;
+        border-radius: 8px; /* Plus arrondi */
         cursor: pointer;
-        font-size: 1em;
-        transition: background-color 0.3s;
+        font-size: 1.05em;
+        font-weight: 700;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        transition: background-color 0.3s, transform 0.1s;
+        width: 100%; /* S'étend sur toute la largeur */
       }
 
       #play-button:hover {
-        background-color: #0056b3;
+        background-color: #388e3c;
+      }
+
+      #play-button:active {
+        transform: scale(0.98);
       }
 
       /* --- Style de la Carte (Map) --- */
       #map {
         flex: 1;
         position: relative;
+        /* S'assurer que les coins ne sont pas arrondis, mais la carte est plus intégrée */
       }
 
       /* Styles de la légende pour les alertes SPC */
       .legend-item {
         display: flex;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 12px; /* Plus d'espace vertical */
+        font-size: 0.95em;
       }
       .legend-color {
-        width: 20px;
-        height: 20px;
-        margin-right: 10px;
-        border: 1px solid #000;
-        opacity: 0.6;
+        width: 25px;
+        height: 25px;
+        margin-right: 15px;
+        border: 2px solid #000;
+        opacity: 0.7; /* Légère opacité */
+        border-radius: 4px; /* Adoucir les carrés */
+      }
+
+      /* Style pour le séparateur horizontal */
+      hr {
+        border: 0;
+        border-top: 1px solid #e0e0e0;
+        margin: 20px 0;
       }
     </style>
   </head>
@@ -165,7 +204,15 @@
 
         <h4>Contrôle des Données</h4>
         <button id="play-button">▶️ Démarrer l'Animation</button>
-        <div id="time-display" style="margin-top: 10px; font-weight: bold">
+        <div
+          id="time-display"
+          style="
+            margin-top: 15px;
+            font-weight: 700;
+            color: #1a237e;
+            text-align: center;
+          "
+        >
           Heure : Statique
         </div>
       </aside>
@@ -184,7 +231,9 @@
 
       const map = new mapboxgl.Map({
         container: "map",
-        style: "mapbox://styles/mapbox/light-v11",
+        // Suggestion : utiliser un style Mapbox plus moderne comme "dark-v11" pour un look pro
+        // style: "mapbox://styles/mapbox/dark-v11",
+        style: "mapbox://styles/mapbox/dark-v11",
         center: [-95.7129, 37.0902],
         zoom: 4,
         attributionControl: false,
