@@ -104,8 +104,9 @@
         font-size: 0.95em;
       }
 
-      /* Player button style */
-      #play-button {
+      /* Player and Toggle Button Style */
+      #play-button,
+      #toggle-base-map {
         background-color: #4caf50;
         color: white;
         border: none;
@@ -117,14 +118,31 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         transition: background-color 0.3s, transform 0.1s;
         width: 100%;
+        margin-bottom: 10px; /* Space between buttons */
       }
 
-      #play-button:hover {
+      #play-button:disabled,
+      #toggle-base-map:disabled {
+        background-color: #555555;
+        cursor: not-allowed;
+      }
+
+      #play-button:hover:not(:disabled),
+      #toggle-base-map:hover:not(:disabled) {
         background-color: #388e3c;
       }
 
-      #play-button:active {
+      #play-button:active:not(:disabled),
+      #toggle-base-map:active:not(:disabled) {
         transform: scale(0.98);
+      }
+
+      /* Light Mode Button Styling */
+      .light-mode-active {
+        background-color: #1e88e5 !important; /* Blue for light mode */
+      }
+      .light-mode-active:hover:not(:disabled) {
+        background-color: #1565c0 !important;
       }
 
       /* --- Map Style --- */
@@ -132,7 +150,7 @@
         flex: 1;
         position: relative;
       }
-      /* Fix pour les popups Leaflet sur fond sombre */
+      /* Fix for Leaflet popups on dark background */
       .leaflet-popup-content-wrapper,
       .leaflet-popup-tip {
         background: #333333;
@@ -219,14 +237,14 @@
         }
       }
 
-      /* --- Media Query pour les appareils mobiles/petits écrans (max 768px) --- */
+      /* --- Media Query for Mobile/Small Screens (max 768px) --- */
       @media (max-width: 768px) {
-        /* 1. Conteneur principal (empilement vertical) */
+        /* 1. Main Container (vertical stacking) */
         #main-container {
           flex-direction: column;
         }
 
-        /* 2. Style de l'en-tête pour les petits écrans */
+        /* 2. Header Style */
         header {
           padding: 15px 20px;
           font-size: 1.4em;
@@ -237,19 +255,19 @@
           display: none;
         }
 
-        /* 3. Barre latérale (prend toute la largeur) */
+        /* 3. Sidebar (full width) */
         #sidebar {
-          width: auto; /* Prend toute la largeur disponible */
-          padding: 20px; /* Ajuste le padding */
-          height: auto; /* Hauteur définie par le contenu */
+          width: auto; /* Takes full available width */
+          padding: 20px; /* Adjust padding */
+          height: auto; /* Height defined by content */
           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
           border-bottom: 1px solid #444444;
           order: -1;
         }
 
-        /* 4. Carte (PREND L'ESPACE VERTICAL RESTANT ET DOIT AVOIR UNE HAUTEUR FIXE) */
+        /* 4. Map (takes remaining vertical space and must have a fixed height) */
         #map {
-          height: 60vh; /* IMPORTANT pour l'affichage mobile */
+          height: 60vh; /* IMPORTANT for mobile view */
         }
       }
     </style>
@@ -291,17 +309,18 @@
         <hr />
 
         <h4>Active Layers</h4>
-        <ul>
-          <li>**IGO Base Map** (Quebec Topo Base)</li>
+        <ul id="active-layers-list">
+          <li id="base-map-status">**CartoDB Dark Base Map**</li>
           <li>**IGO Historical Events** (GeoJSON)</li>
           <li>NEXRAD Radar (Tile Layer)</li>
-          <li>SPC NOAA Forecasts (GeoJSON)</li>
+          <li id="spc-layer-status">SPC NOAA Forecasts (GeoJSON)</li>
         </ul>
 
         <hr />
 
         <h4>Data Controls</h4>
-        <button id="play-button">▶️ Start Animation</button>
+        <button id="toggle-base-map">💡 Switch to Light Map</button>
+        <button id="play-button" disabled>▶️ Start Animation</button>
         <div
           id="time-display"
           style="
@@ -325,135 +344,62 @@
     </div>
 
     <footer>
-      &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO Québec (MSP). Usage éducatif
-      seulement.
+      **Map and Data Sources** | &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO
+      Québec (MSP). For educational and non-commercial use.
     </footer>
 
     <script>
       // ----------------------------------------------------------------
-      // Base Configuration (Leaflet)
+      // Global Variables and Map Initialization
       // ----------------------------------------------------------------
 
+      // Map Instance
       const map = L.map("map", {
-        // Coordonnées ajustées pour centrer sur les États-Unis
         center: [39.8, -98.5],
-        // Niveau de zoom 4 est optimal pour une vue d'ensemble continentale
         zoom: 4,
         minZoom: 2,
         attributionControl: false,
       });
-      // Contrôle d'attribution personnalisé
-      L.control
-        .attribution({
-          position: "bottomright",
-          // *** ATTRIBUTION MISE À JOUR POUR CARTODB/OSM ***
-          prefix:
-            'Leaflet | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CartoDB</a> | Data: SPC NOAA / NEXRAD / IGO Quebec (MSP)',
-        })
-        .addTo(map);
 
-      // *** NOUVELLE COUCHE DE BASE SANS CLÉ D'ACCÈS (CartoDB Dark Matter) ***
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CartoDB</a>',
-          maxZoom: 19,
-          subdomains: "abcd", // Sous-domaines typiques pour CartoDB
-        }
-      ).addTo(map);
+      // Layer References (Declared globally for access by functions)
+      let spcLayer = null;
+      let animationInterval = null;
+      let isPlaying = false;
+      let currentBaseLayer = null; // To hold the active base map layer
+      let isDarkMode = true; // State for the map theme
 
-      // Correction standard pour le rendu de la carte Leaflet dans un conteneur Flexbox
-      map.whenReady(function () {
-        this.invalidateSize();
-      });
+      let currentStepIndex = 0;
+      const animationSteps = [0.2, 0.4, 0.6, 0.8]; // Opacity steps for animation
 
-      // ----------------------------------------------------------------
-      // Data Loading
-      // ----------------------------------------------------------------
-
-      // HIDE THE LOADING SPINNER
+      // DOM Elements
       const loadingOverlay = document.getElementById("loading-overlay");
-      setTimeout(() => {
-        loadingOverlay.style.opacity = "0";
-        setTimeout(() => {
-          loadingOverlay.style.display = "none";
-        }, 300);
-      }, 500); // 500ms d'attente pour être sûr
+      const playButton = document.getElementById("play-button");
+      const timeDisplay = document.getElementById("time-display");
+      const spcStatus = document.getElementById("spc-layer-status");
+      const baseMapStatus = document.getElementById("base-map-status");
+      const toggleButton = document.getElementById("toggle-base-map");
 
-      // ================================================================
-      // === IGO LAYERS (QUEBEC) ===
-      // ================================================================
+      // Tile Layer Definitions
+      const baseMaps = {
+        dark: L.tileLayer(
+          "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+          {
+            attribution: "&copy; CARTO Dark | Sources: OSM, NEXRAD, IGO",
+            maxZoom: 19,
+            subdomains: "abcd",
+          }
+        ),
+        light: L.tileLayer(
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {
+            attribution: "&copy; OpenStreetMap | Sources: OSM, NEXRAD, IGO",
+            maxZoom: 19,
+            subdomains: "abcd",
+          }
+        ),
+      };
 
-      // --- IGO 1. PUBLIC TOPOGRAPHIC BASE MAP (Tile Layer) ---
-      const igoBaseLayer = L.tileLayer(
-        "https://geoegl.msp.gouv.qc.ca/carto/tms/1.0.0/carte_gouv_qc_public@EPSG_3857/{z}/{x}/{y}.png",
-        {
-          attribution: "IGO Base Map: Government of Quebec",
-          tms: true, // Indique que c'est un service TMS
-          opacity: 0.8,
-          maxZoom: 18,
-        }
-      ).addTo(map);
-
-      // --- NEW LAYER 2. IGO HISTORICAL EVENTS (GeoJSON) ---
-      const historiqueEventsUrl =
-        "https://geoegl.msp.gouv.qc.ca/apis/wss/historiquesc.fcgi?service=wfs&version=1.1.0&request=getfeature&typename=msp_risc_evenements_public&outputformat=geojson&srsName=epsg:4326";
-
-      fetch(historiqueEventsUrl)
-        .then((response) => response.json())
-        .then((data) => {
-          const historiqueLayer = L.geoJSON(data, {
-            pointToLayer: function (feature, latlng) {
-              return L.circleMarker(latlng, {
-                radius: 6,
-                fillColor: "#800080", // Purple
-                color: "#ffffff", // White stroke
-                weight: 1.5,
-                opacity: 0.8,
-                fillOpacity: 0.8,
-              });
-            },
-            onEachFeature: function (feature, layer) {
-              // Création du contenu du popup
-              let description = "<strong>MSP Historical Event</strong><br>";
-              for (const key in feature.properties) {
-                if (feature.properties.hasOwnProperty(key)) {
-                  const value =
-                    typeof feature.properties[key] === "string" &&
-                    feature.properties[key].length > 100
-                      ? feature.properties[key].substring(0, 100) + "..."
-                      : feature.properties[key];
-                  if (value !== null && key !== "geom") {
-                    description += `<strong>${key}</strong>: ${value}<br>`;
-                  }
-                }
-              }
-              layer.bindPopup(description);
-            },
-          }).addTo(map);
-        })
-        .catch((error) =>
-          console.error("Error loading IGO historical events:", error)
-        );
-
-      // ================================================================
-      // === WEATHER LAYERS (USA) ===
-      // ================================================================
-
-      // --- 3. NEXRAD RADAR LAYER (Raster) ---
-      const radarTileUrl =
-        "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png";
-
-      const nexradLayer = L.tileLayer(radarTileUrl, {
-        attribution:
-          'Radar: NEXRAD via <a href="https://mesonet.agron.iastate.edu/" target="_blank">Iowa State Mesonet</a>',
-        opacity: 0.8,
-        maxZoom: 12,
-      }).addTo(map);
-
-      // --- 4. SPC NOAA LAYER (GeoJSON) ---
-
+      // Color mapping function
       const spcColors = (dn) => {
         switch (dn) {
           case 1:
@@ -469,84 +415,242 @@
         }
       };
 
-      fetch(
-        "https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson"
-      )
-        .then((response) => response.json())
-        .then((data) => {
-          const spcLayer = L.geoJSON(data, {
-            style: function (feature) {
-              return {
-                fillColor: spcColors(feature.properties.DN),
-                weight: 2, // Line width (outline)
-                opacity: 1, // Line opacity (outline)
-                color: "black", // Line color (outline)
-                fillOpacity: 0.6,
-              };
-            },
-            onEachFeature: function (feature, layer) {
-              // Création du contenu du popup
-              const properties = feature.properties;
-              const description = Object.keys(properties)
-                .map((key) => `<strong>${key}</strong>: ${properties[key]}`)
-                .join("<br>");
+      // ----------------------------------------------------------------
+      // Leaflet Setup & Base Layer Toggle
+      // ----------------------------------------------------------------
 
-              layer.bindPopup(description);
+      function setupMap() {
+        // Attribution Control
+        L.control
+          .attribution({
+            position: "bottomright",
+            prefix:
+              " &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO Québec (MSP). For educational and non-commercial use.",
+          })
+          .addTo(map);
 
-              // Gestion du curseur au survol (similaire à Mapbox)
-              layer.on("mouseover", function () {
-                map.getContainer().style.cursor = "pointer";
-              });
-              layer.on("mouseout", function () {
-                map.getContainer().style.cursor = "";
-              });
-            },
-          }).addTo(map);
+        // Add the initial Dark Base Map Layer
+        currentBaseLayer = baseMaps.dark;
+        currentBaseLayer.addTo(map);
+        baseMapStatus.textContent = "**CartoDB Dark Base Map**";
 
-          // --- 5. Animation Function (Player) ---
+        // Fix for Leaflet rendering in Flexbox container
+        map.whenReady(function () {
+          this.invalidateSize();
+        });
+      }
 
-          document
-            .getElementById("play-button")
-            .addEventListener("click", toggleAnimation);
+      function toggleBaseMap() {
+        // 1. Remove the current layer
+        if (currentBaseLayer) {
+          map.removeLayer(currentBaseLayer);
+        }
 
-          let animationInterval = null;
-          let isPlaying = false;
-          const animationSteps = [0.2, 0.4, 0.6, 0.8];
-          let currentStepIndex = 0;
+        // 2. Switch mode and set the new layer
+        if (isDarkMode) {
+          // Switch to Light Mode
+          currentBaseLayer = baseMaps.light;
+          toggleButton.innerHTML = "🌙 Switch to Dark Map";
+          baseMapStatus.textContent = "**OSM Standard Base Map**";
+          toggleButton.classList.add("light-mode-active");
+          isDarkMode = false;
+        } else {
+          // Switch to Dark Mode
+          currentBaseLayer = baseMaps.dark;
+          toggleButton.innerHTML = "💡 Switch to Light Map";
+          baseMapStatus.textContent = "**CartoDB Dark Base Map**";
+          toggleButton.classList.remove("light-mode-active");
+          isDarkMode = true;
+        }
 
-          function toggleAnimation() {
-            const button = document.getElementById("play-button");
-            const display = document.getElementById("time-display");
+        // 3. Add the new layer to the map
+        currentBaseLayer.addTo(map).bringToBack();
+      }
 
-            if (isPlaying) {
-              clearInterval(animationInterval);
-              isPlaying = false;
-              button.innerHTML = "▶️ Start Animation"; // Texte du bouton traduit
-              display.textContent = "Time: Static"; // Texte du temps traduit
-              // Remet l'opacité à la valeur par défaut
-              spcLayer.setStyle({ fillOpacity: 0.6 });
-            } else {
-              isPlaying = true;
-              button.innerHTML = "⏸️ Stop Animation"; // Texte du bouton traduit
+      // ----------------------------------------------------------------
+      // Layer Loading Functions
+      // ----------------------------------------------------------------
 
-              animationInterval = setInterval(() => {
-                currentStepIndex =
-                  (currentStepIndex + 1) % animationSteps.length;
-                const opacity = animationSteps[currentStepIndex];
-                const timeLabel = `Step ${currentStepIndex + 1} / 4`; // Label traduit
-
-                // Met à jour l'opacité de la couche GeoJSON (Leaflet)
-                spcLayer.setStyle({ fillOpacity: opacity });
-
-                // Texte de l'affichage traduit
-                display.textContent = `Time: ${timeLabel} (Opacity: ${opacity.toFixed(
-                  1
-                )})`;
-              }, 500);
-            }
+      function loadIgoLayers() {
+        // IGO Public Topographic Base Map (This one acts as an overlay/secondary map, not the main base)
+        const igoBaseLayer = L.tileLayer(
+          "https://geoegl.msp.gouv.qc.ca/carto/tms/1.0.0/carte_gouv_qc_public@EPSG_3857/{z}/{x}/{y}.png",
+          {
+            attribution: "IGO Base Map: Government of Quebec",
+            tms: true,
+            opacity: 0.8,
+            maxZoom: 18,
           }
-        })
-        .catch((error) => console.error("Error loading SPC data:", error));
+        ).addTo(map);
+
+        // IGO Historical Events (GeoJSON)
+        const historiqueEventsUrl =
+          "https://geoegl.msp.gouv.qc.ca/apis/wss/historiquesc.fcgi?service=wfs&version=1.1.0&request=getfeature&typename=msp_risc_evenements_public&outputformat=geojson&srsName=epsg:4326";
+
+        fetch(historiqueEventsUrl)
+          .then((response) => {
+            if (!response.ok)
+              throw new Error("IGO Fetch failed: " + response.statusText);
+            return response.json();
+          })
+          .then((data) => {
+            L.geoJSON(data, {
+              pointToLayer: function (feature, latlng) {
+                return L.circleMarker(latlng, {
+                  radius: 6,
+                  fillColor: "#800080", // Purple
+                  color: "#ffffff", // White stroke
+                  weight: 1.5,
+                  opacity: 0.8,
+                  fillOpacity: 0.8,
+                });
+              },
+              onEachFeature: function (feature, layer) {
+                let description = "<strong>MSP Historical Event</strong><br>";
+                for (const key in feature.properties) {
+                  if (feature.properties.hasOwnProperty(key)) {
+                    const value =
+                      typeof feature.properties[key] === "string" &&
+                      feature.properties[key].length > 100
+                        ? feature.properties[key].substring(0, 100) + "..."
+                        : feature.properties[key];
+                    if (value !== null && key !== "geom") {
+                      description += `<strong>${key}</strong>: ${value}<br>`;
+                    }
+                  }
+                }
+                layer.bindPopup(description);
+              },
+            }).addTo(map);
+          })
+          .catch((error) =>
+            console.error("Error loading IGO historical events:", error)
+          );
+      }
+
+      function loadWeatherLayers() {
+        // NEXRAD Radar Layer
+        const radarTileUrl =
+          "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png";
+
+        L.tileLayer(radarTileUrl, {
+          attribution:
+            'Radar: NEXRAD via <a href="https://mesonet.agron.iastate.edu/" target="_blank">Iowa State Mesonet</a>',
+          opacity: 0.8,
+          maxZoom: 12,
+        }).addTo(map);
+
+        // SPC NOAA Layer (GeoJSON)
+        fetch(
+          "https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson"
+        )
+          .then((response) => {
+            if (!response.ok)
+              throw new Error("SPC Fetch failed: " + response.statusText);
+            return response.json();
+          })
+          .then((data) => {
+            spcLayer = L.geoJSON(data, {
+              style: function (feature) {
+                return {
+                  fillColor: spcColors(feature.properties.DN),
+                  weight: 2,
+                  opacity: 1,
+                  color: "black",
+                  fillOpacity: 0.6, // Default opacity
+                };
+              },
+              onEachFeature: function (feature, layer) {
+                const properties = feature.properties;
+                const description = Object.keys(properties)
+                  .map((key) => `<strong>${key}</strong>: ${properties[key]}`)
+                  .join("<br>");
+
+                layer.bindPopup(description);
+
+                layer.on("mouseover", function () {
+                  map.getContainer().style.cursor = "pointer";
+                });
+                layer.on("mouseout", function () {
+                  map.getContainer().style.cursor = "";
+                });
+              },
+            }).addTo(map);
+
+            // ENABLE animation only if SPC data loads successfully
+            playButton.disabled = false;
+            spcStatus.textContent = "SPC NOAA Forecasts (GeoJSON) - Loaded";
+          })
+          .catch((error) => {
+            console.error(
+              "Error loading SPC data (animation disabled):",
+              error
+            );
+            // Update status text on failure
+            spcStatus.textContent =
+              "SPC NOAA Forecasts (GeoJSON) - FAILED to load";
+          });
+      }
+
+      // ----------------------------------------------------------------
+      // Animation Logic
+      // ----------------------------------------------------------------
+
+      function toggleAnimation() {
+        if (!spcLayer) {
+          console.warn("SPC Layer not loaded. Cannot start animation.");
+          return;
+        }
+
+        if (isPlaying) {
+          clearInterval(animationInterval);
+          isPlaying = false;
+          playButton.innerHTML = "▶️ Start Animation";
+          timeDisplay.textContent = "Time: Static";
+          // Reset opacity to default when stopped
+          spcLayer.setStyle({ fillOpacity: 0.6 });
+        } else {
+          isPlaying = true;
+          playButton.innerHTML = "⏸️ Stop Animation";
+
+          animationInterval = setInterval(() => {
+            currentStepIndex = (currentStepIndex + 1) % animationSteps.length;
+            const opacity = animationSteps[currentStepIndex];
+            const timeLabel = `Step ${currentStepIndex + 1} / ${
+              animationSteps.length
+            }`;
+
+            // Update GeoJSON layer opacity
+            spcLayer.setStyle({ fillOpacity: opacity });
+
+            timeDisplay.textContent = `Time: ${timeLabel} (Opacity: ${opacity.toFixed(
+              1
+            )})`;
+          }, 500);
+        }
+      }
+
+      // ----------------------------------------------------------------
+      // Main Execution & Event Listeners
+      // ----------------------------------------------------------------
+
+      document.addEventListener("DOMContentLoaded", () => {
+        setupMap();
+        loadIgoLayers();
+        loadWeatherLayers();
+
+        // Event listeners for the buttons
+        playButton.addEventListener("click", toggleAnimation);
+        toggleButton.addEventListener("click", toggleBaseMap); // New listener for base map toggle
+
+        // Hide loading spinner after a short delay
+        setTimeout(() => {
+          loadingOverlay.style.opacity = "0";
+          setTimeout(() => {
+            loadingOverlay.style.display = "none";
+          }, 300);
+        }, 500);
+      });
     </script>
   </body>
 </html>
