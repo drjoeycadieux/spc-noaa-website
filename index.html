@@ -2,7 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Weather and Geomatics Alerts - SPC / NEXRAD / IGO / MSC</title>
+    <title>
+      Weather and Geomatics Alerts - SPC / NEXRAD / IGO / MSC / Hydro-Québec
+    </title>
     <meta
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
@@ -156,6 +158,19 @@
         border-radius: 4px;
       }
 
+      /* Style for the HQ outage marker in legend (Circle) */
+      .legend-circle {
+        width: 25px;
+        height: 25px;
+        margin-right: 15px;
+        border: 2px solid #fff; /* White border */
+        background-color: #ff4500; /* Distinctive color */
+        opacity: 0.9;
+        border-radius: 50%; /* Circle shape */
+        display: inline-block;
+        box-shadow: 0 0 5px rgba(255, 69, 0, 0.5);
+      }
+
       /* Horizontal separator style */
       hr {
         border: 0;
@@ -280,12 +295,21 @@
 
         <hr />
 
+        <h3>Hydro-Québec Legend</h3>
+        <div class="legend-item">
+          <span class="legend-circle"></span>
+          <span>Power Outage Zone (Point)</span>
+        </div>
+
+        <hr />
+
         <h4>Active Layers</h4>
         <ul id="active-layers-list">
           <li id="base-map-status">**OSM Standard Base Map**</li>
           <li>**IGO Historical Events** (GeoJSON)</li>
           <li>NEXRAD Radar (Tile Layer)</li>
           <li id="spc-layer-status">SPC NOAA Forecasts (GeoJSON)</li>
+          <li id="hq-outage-status">Hydro-Québec Outages (GeoJSON)</li>
         </ul>
 
         <hr />
@@ -315,7 +339,8 @@
 
     <footer>
       **Map and Data Sources** | &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO
-      Québec (MSP), **MSC CAP**. For educational and non-commercial use.
+      Québec (MSP), **MSC CAP**, **Hydro-Québec**. For educational and
+      non-commercial use.
     </footer>
 
     <script>
@@ -325,8 +350,8 @@
 
       // Map Instance
       const map = L.map("map", {
-        center: [39.8, -98.5],
-        zoom: 4,
+        center: [46.8, -71.2], // Center on Quebec City area for potential Hydro-Quebec focus
+        zoom: 7,
         minZoom: 2,
         attributionControl: false,
       });
@@ -334,9 +359,10 @@
       // Layer References
       let spcLayer = null;
       let capLayer = null;
+      let hqOutageLayer = null; // Hydro-Québec layer reference
       let animationInterval = null;
       let isPlaying = false;
-      let currentBaseLayer = null; // Still needed to hold the light map reference
+      let currentBaseLayer = null;
 
       let currentStepIndex = 0;
       const animationSteps = [0.2, 0.4, 0.6, 0.8];
@@ -347,15 +373,16 @@
       const timeDisplay = document.getElementById("time-display");
       const spcStatus = document.getElementById("spc-layer-status");
       const baseMapStatus = document.getElementById("base-map-status");
-      // const toggleButton = document.getElementById("toggle-base-map"); // REMOVED
+      const activeLayersList = document.getElementById("active-layers-list");
+      const hqOutageStatus = document.getElementById("hq-outage-status"); // STATUS ELEMENT
 
-      // Tile Layer Definitions (Only the Light Map remains)
+      // Tile Layer Definitions
       const baseMaps = {
         light: L.tileLayer(
           "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
           {
             attribution:
-              "&copy; OpenStreetMap | Sources: OSM, NEXRAD, IGO, MSC",
+              "&copy; OpenStreetMap | Sources: OSM, NEXRAD, IGO, MSC, Hydro-Québec",
             maxZoom: 19,
             subdomains: "abcd",
           }
@@ -396,7 +423,7 @@
       };
 
       // ----------------------------------------------------------------
-      // Leaflet Setup (Simplified)
+      // Leaflet Setup
       // ----------------------------------------------------------------
 
       function setupMap() {
@@ -404,7 +431,7 @@
           .attribution({
             position: "bottomright",
             prefix:
-              " &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO Québec (MSP), MSC CAP Alert. For educational and non-commercial use.",
+              " &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO Québec (MSP), MSC CAP Alert, **Hydro-Québec Outages**. For educational and non-commercial use.",
           })
           .addTo(map);
 
@@ -417,8 +444,6 @@
           this.invalidateSize();
         });
       }
-
-      // The toggleBaseMap function is REMOVED since there is only one base map.
 
       // ----------------------------------------------------------------
       // CAP Alert XML to GeoJSON Conversion Logic
@@ -496,10 +521,13 @@
         const capGeoJson = capXmlToGeoJSON(capXmlString);
 
         if (!capGeoJson) {
-          // Add failed status to the list
-          const capStatusLi = document.createElement("li");
-          capStatusLi.innerHTML = `**MSC CAP Alert:** FAILED to load or parse.`;
-          activeLayersList.appendChild(capStatusLi);
+          // Changed to use cap status element
+          const capStatusLi = document.querySelector(
+            "#active-layers-list li:nth-child(4)"
+          );
+          if (capStatusLi) {
+            capStatusLi.innerHTML = `**MSC CAP Alert:** FAILED to load or parse sample.`;
+          }
           return;
         }
 
@@ -524,21 +552,21 @@
           onEachFeature: function (feature, layer) {
             const properties = feature.properties;
             const popupContent = `
-                        <h4 style="margin: 0; color: ${capColors(
-                          properties.severity
-                        )};">${properties.event}</h4>
-                        <strong>Headline:</strong> ${properties.headline}<br>
-                        <strong>Severity:</strong> ${properties.severity}<br>
-                        <strong>Expires:</strong> ${
-                          properties.expires
-                            ? new Date(properties.expires).toLocaleString()
-                            : "N/A"
-                        }<br>
-                        <hr style="border-color: #555;">
-                        <p style="margin: 5px 0 0 0;">${properties.description.substring(
-                          0,
-                          300
-                        )}...</p>
+                      <h4 style="margin: 0; color: ${capColors(
+                        properties.severity
+                      )};">${properties.event}</h4>
+                      <strong>Headline:</strong> ${properties.headline}<br>
+                      <strong>Severity:</strong> ${properties.severity}<br>
+                      <strong>Expires:</strong> ${
+                        properties.expires
+                          ? new Date(properties.expires).toLocaleString()
+                          : "N/A"
+                      }<br>
+                      <hr style="border-color: #555;">
+                      <p style="margin: 5px 0 0 0;">${properties.description.substring(
+                        0,
+                        300
+                      )}...</p>
                     `;
             layer.bindPopup(popupContent);
             layer.on("click", () => {
@@ -547,15 +575,134 @@
           },
         }).addTo(map);
 
-        // Update Layer Status
-        const capStatusLi = document.createElement("li");
-        capStatusLi.innerHTML = `**MSC CAP Alert:** ${capGeoJson.properties.headline} (**${capGeoJson.properties.severity}**)`;
-        activeLayersList.appendChild(capStatusLi);
-
-        // Zoom to the alert area
-        map.fitBounds(capLayer.getBounds(), { padding: [50, 50] });
+        // Update Layer Status (assuming SPC status is the third, CAP the fourth/fifth placeholder)
+        const capStatusLi = document.querySelector(
+          "#active-layers-list li:nth-child(4)"
+        );
+        if (capStatusLi && capStatusLi.textContent.includes("SPC NOAA")) {
+          // If the list changed structure, this gets complex. For simplicity, we just update the text content where it should be.
+          capStatusLi.innerHTML = `**MSC CAP Alert:** ${capGeoJson.properties.headline} (**${capGeoJson.properties.severity}**)`;
+        } else {
+          // If structure changed, append as a new list item
+          const newCapStatusLi = document.createElement("li");
+          newCapStatusLi.innerHTML = `**MSC CAP Alert:** ${capGeoJson.properties.headline} (**${capGeoJson.properties.severity}**)`;
+          activeLayersList.appendChild(newCapStatusLi);
+        }
 
         console.log("CAP Alert successfully loaded and added to map.");
+      }
+
+      // ----------------------------------------------------------------
+      // NEW: Hydro-Québec Layer Function (with pointToLayer fix)
+      // ----------------------------------------------------------------
+      // FIX: Using a CORS proxy service (corsproxy.io) to bypass the CORS policy block.
+      const hydroQuebecApiUrl =
+        "https://corsproxy.io/?https://pannes.hydroquebec.com/pannes/donnees/v3_0/bisversion.json";
+
+      function loadHydroQuebecOutages() {
+        fetch(hydroQuebecApiUrl)
+          .then((response) => {
+            if (!response.ok)
+              throw new Error(
+                "Hydro-Québec Outages Fetch failed: " + response.statusText
+              );
+            return response.json();
+          })
+          .then((bisVersion) => {
+            // STEP 2: Use the BIS version to fetch the outage markers (GeoJSON)
+            // Note: The proxy is only needed for the initial version fetch.
+            const markersUrl = `https://pannes.hydroquebec.com/pannes/donnees/v3_0/bismarkers${bisVersion}.json`;
+            return fetch(markersUrl);
+          })
+          .then((response) => {
+            if (!response.ok)
+              throw new Error(
+                "Hydro-Québec Markers Fetch failed: " + response.statusText
+              );
+            return response.json();
+          })
+          .then((data) => {
+            // Check if the GeoJSON is valid and has features
+            if (
+              !data ||
+              data.type !== "FeatureCollection" ||
+              !data.features.length
+            ) {
+              console.warn("Hydro-Québec GeoJSON is empty or invalid.");
+              hqOutageStatus.innerHTML = `**Hydro-Québec Outages:** No active outages reported.`;
+              return;
+            }
+
+            // Remove existing layer if it exists
+            if (hqOutageLayer) {
+              map.removeLayer(hqOutageLayer);
+            }
+
+            const numFeatures = data.features.length;
+
+            // Add GeoJSON layer to the map
+            hqOutageLayer = L.geoJSON(data, {
+              // AJOUT CRITIQUE : Définit comment afficher les points
+              pointToLayer: function (feature, latlng) {
+                // Crée un marqueur de cercle (CircleMarker) pour le point de panne
+                return L.circleMarker(latlng, {
+                  radius: 8, // Taille du cercle
+                  fillColor: "#FF4500", // Orange Vif/Rouge (Distinctif)
+                  color: "#FFFFFF", // Bordure blanche
+                  weight: 1.5,
+                  opacity: 1,
+                  fillOpacity: 0.9,
+                });
+              },
+              onEachFeature: function (feature, layer) {
+                const properties = feature.properties;
+
+                // Format the popup content
+                const popupContent = `
+                      <h4>⚠️ Hydro-Québec Outage</h4>
+                      <strong>Region:</strong> ${properties.nom}<br>
+                      <strong>Customers Affected:</strong> ${
+                        properties.nbClientsTouches
+                      }<br>
+                      <strong>Start Time:</strong> ${new Date(
+                        properties.dateHeureDebut
+                      ).toLocaleString()}<br>
+                      <strong>Estimated Restoration:</strong> ${
+                        properties.dateHeureRetablissement || "TBD"
+                      }<br>
+                      <small>Status: ${properties.descriptionEtat}</small>
+                    `;
+                layer.bindPopup(popupContent);
+
+                layer.on("click", () => {
+                  // Panoramique et zoom sur le marqueur de panne
+                  if (layer.getLatLng) {
+                    map.setView(
+                      layer.getLatLng(),
+                      map.getZoom() > 10 ? map.getZoom() : 10
+                    );
+                  } else if (layer.getBounds) {
+                    map.fitBounds(layer.getBounds(), { padding: [20, 20] });
+                  }
+                });
+              },
+            }).addTo(map);
+
+            // Update Layer Status
+            hqOutageStatus.innerHTML = `**Hydro-Québec Outages:** Loaded (${numFeatures} zones)`;
+
+            // Zoom to the area if there are outages (using getBounds() on the GeoJSON layer)
+            map.fitBounds(hqOutageLayer.getBounds(), { padding: [50, 50] });
+
+            console.log(
+              "Hydro-Québec Outages successfully loaded and added to map."
+            );
+          })
+          .catch((error) => {
+            console.error("Error loading Hydro-Québec outages:", error);
+            // Add failed status to the list
+            hqOutageStatus.innerHTML = `**Hydro-Québec Outages:** FAILED to load.`;
+          });
       }
 
       // ----------------------------------------------------------------
@@ -726,40 +873,41 @@
         setupMap();
         loadIgoLayers();
         loadWeatherLayers();
+        // Load Hydro-Québec outages (Now correctly using pointToLayer)
+        loadHydroQuebecOutages();
 
         // --- MSC CAP ALERT DATA LOADING ---
-        // Using the specific file name provided by the user.
         const capAlertUrl = "T_WWCN11_C_CWVR_202511190220_1187808547.cap";
 
         // Placeholder CAP-XML string (used if fetch fails)
         const sampleCapXml = `
-                <?xml version="1.0" encoding="UTF-8"?>
-                <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
-                <identifier>MSC-Alert-SAMPLE-4321</identifier>
-                <sender>CWTO</sender>
-                <sent>2025-11-19T06:00:00-05:00</sent>
-                <status>Actual</status>
-                <msgType>Alert</msgType>
-                <scope>Public</scope>
-                <info>
-                    <language>en-CA</language>
-                    <category>Met</category>
-                    <event>Severe Thunderstorm Warning</event>
-                    <responseType>Shelter</responseType>
-                    <urgency>Immediate</urgency>
-                    <severity>Severe</severity>
-                    <certainty>Observed</certainty>
-                    <effective>2025-11-19T06:00:00-05:00</effective>
-                    <expires>2025-11-19T08:00:00-05:00</expires>
-                    <headline>SAMPLE: Severe Thunderstorm Warning for Southern Quebec</headline>
-                    <description>Conditions are favourable for the development of dangerous thunderstorms that may be capable of producing large hail, damaging winds, and heavy rain. Take shelter immediately (This is sample data).</description>
-                    <area>
-                    <areaDesc>Montreal - Laval - Longueuil Region (SAMPLE)</areaDesc>
-                    <polygon>45.5017,-73.5673 45.4583,-73.9400 45.6983,-73.7433 45.8167,-73.2733 45.5017,-73.5673</polygon>
-                    </area>
-                </info>
-                </alert>
-            `;
+                <?xml version="1.0" encoding="UTF-8"?>
+                <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+                <identifier>MSC-Alert-SAMPLE-4321</identifier>
+                <sender>CWTO</sender>
+                <sent>2025-11-19T06:00:00-05:00</sent>
+                <status>Actual</status>
+                <msgType>Alert</msgType>
+                <scope>Public</scope>
+                <info>
+                    <language>en-CA</language>
+                    <category>Met</category>
+                    <event>Severe Thunderstorm Warning</event>
+                    <responseType>Shelter</responseType>
+                    <urgency>Immediate</urgency>
+                    <severity>Severe</severity>
+                    <certainty>Observed</certainty>
+                    <effective>2025-11-19T06:00:00-05:00</effective>
+                    <expires>2025-11-19T08:00:00-05:00</expires>
+                    <headline>SAMPLE: Severe Thunderstorm Warning for Southern Quebec</headline>
+                    <description>Conditions are favourable for the development of dangerous thunderstorms that may be capable of producing large hail, damaging winds, and heavy rain. Take shelter immediately (This is sample data).</description>
+                    <area>
+                    <areaDesc>Montreal - Laval - Longueuil Region (SAMPLE)</areaDesc>
+                    <polygon>45.5017,-73.5673 45.4583,-73.9400 45.6983,-73.7433 45.8167,-73.2733 45.5017,-73.5673</polygon>
+                    </area>
+                </info>
+                </alert>
+            `;
 
         // Attempt to fetch the file
         fetch(capAlertUrl)
