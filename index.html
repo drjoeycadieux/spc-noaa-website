@@ -8,11 +8,8 @@
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
     />
 
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
-    <link
-      href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css"
-      rel="stylesheet"
-    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,47 +19,6 @@
     />
 
     <style>
-      /* --- Media Query pour les appareils mobiles/petits écrans (max 768px) --- */
-      @media (max-width: 768px) {
-        /* 1. Conteneur principal (empilement vertical) */
-        #main-container {
-          /* Change l'alignement pour empiler la sidebar au-dessus de la carte */
-          flex-direction: column;
-        }
-
-        /* 2. Style de l'en-tête pour les petits écrans */
-        header {
-          padding: 15px 20px; /* Moins de padding */
-          font-size: 1.4em;
-          /* Cache les liens externes pour simplifier l'en-tête */
-          display: block; /* S'assure que le titre prend toute la largeur */
-          text-align: center;
-        }
-        .header-links {
-          display: none; /* Cache les liens de l'en-tête (optionnel) */
-        }
-
-        /* 3. Barre latérale (prend toute la largeur) */
-        #sidebar {
-          width: auto; /* Prend toute la largeur disponible */
-          padding: 20px; /* Ajuste le padding */
-          height: auto; /* Hauteur définie par le contenu */
-          /* Retire l'ombre latérale qui n'a plus de sens en haut/bas */
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-          /* Ajoute une bordure inférieure si elle est en haut */
-          border-bottom: 1px solid #444444;
-          /* Pour s'assurer qu'elle est en haut */
-          order: -1;
-        }
-
-        /* 4. Carte (prend l'espace vertical restant) */
-        #map {
-          /* La carte doit avoir une hauteur définie, car le flex-grow: 1 ne suffit pas */
-          /* Utilise l'espace vertical restant (100vh - hauteur de l'en-tête - hauteur de la barre latérale - hauteur du pied de page) */
-          /* Une hauteur fixe est souvent plus simple ou une hauteur par rapport à la vue */
-          height: 60vh; /* Utilise 60% de la hauteur de la vue pour la carte */
-        }
-      }
       /* CSS Base */
       body {
         margin: 0;
@@ -176,6 +132,12 @@
         flex: 1;
         position: relative;
       }
+      /* Fix pour les popups Leaflet sur fond sombre */
+      .leaflet-popup-content-wrapper,
+      .leaflet-popup-tip {
+        background: #333333;
+        color: #cccccc;
+      }
 
       /* Legend styles for SPC alerts */
       .legend-item {
@@ -256,6 +218,40 @@
           transform: rotate(360deg);
         }
       }
+
+      /* --- Media Query pour les appareils mobiles/petits écrans (max 768px) --- */
+      @media (max-width: 768px) {
+        /* 1. Conteneur principal (empilement vertical) */
+        #main-container {
+          flex-direction: column;
+        }
+
+        /* 2. Style de l'en-tête pour les petits écrans */
+        header {
+          padding: 15px 20px;
+          font-size: 1.4em;
+          display: block;
+          text-align: center;
+        }
+        .header-links {
+          display: none;
+        }
+
+        /* 3. Barre latérale (prend toute la largeur) */
+        #sidebar {
+          width: auto; /* Prend toute la largeur disponible */
+          padding: 20px; /* Ajuste le padding */
+          height: auto; /* Hauteur définie par le contenu */
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+          border-bottom: 1px solid #444444;
+          order: -1;
+        }
+
+        /* 4. Carte (PREND L'ESPACE VERTICAL RESTANT ET DOIT AVOIR UNE HAUTEUR FIXE) */
+        #map {
+          height: 60vh; /* IMPORTANT pour l'affichage mobile */
+        }
+      }
     </style>
   </head>
   <body>
@@ -298,7 +294,7 @@
         <ul>
           <li>**IGO Base Map** (Quebec Topo Base)</li>
           <li>**IGO Historical Events** (GeoJSON)</li>
-          <li>NEXRAD Radar (Raster Layer)</li>
+          <li>NEXRAD Radar (Tile Layer)</li>
           <li>SPC NOAA Forecasts (GeoJSON)</li>
         </ul>
 
@@ -329,279 +325,228 @@
     </div>
 
     <footer>
-      &copy; 2025 Weather and Geomatics Alerts | Data sources via SPC NOAA, Iowa
-      State Mesonet (NEXRAD), and IGO Québec (MSP). | For educational use only.
+      &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO Québec (MSP). Usage éducatif
+      seulement.
     </footer>
 
     <script>
       // ----------------------------------------------------------------
-      // Base Configuration
+      // Base Configuration (Leaflet)
       // ----------------------------------------------------------------
-      // ** IMPORTANT : REPLACE THIS WITH YOUR REAL MAPBOX ACCESS TOKEN **
-      mapboxgl.accessToken =
-        "pk.eyJ1Ijoiam9leWNyZWF0b3IiLCJhIjoiY21pNTA0ZW5tMmNobDJrb2xnZHMzdGZ0biJ9.Ohr-h7iBEDpvKTJUl2S9AQ";
 
-      const map = new mapboxgl.Map({
-        container: "map",
-        // DARK MODE: Switched map style to dark-v11
-        style: "mapbox://styles/mapbox/dark-v11",
-        center: [-75.0, 42.0],
+      const map = L.map("map", {
+        // Coordonnées ajustées pour centrer sur les États-Unis
+        center: [39.8, -98.5],
+        // Niveau de zoom 4 est optimal pour une vue d'ensemble continentale
         zoom: 4,
+        minZoom: 2,
         attributionControl: false,
       });
+      // Contrôle d'attribution personnalisé
+      L.control
+        .attribution({
+          position: "bottomright",
+          // *** ATTRIBUTION MISE À JOUR POUR CARTODB/OSM ***
+          prefix:
+            'Leaflet | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CartoDB</a> | Data: SPC NOAA / NEXRAD / IGO Quebec (MSP)',
+        })
+        .addTo(map);
 
-      // Move attribution
-      map.addControl(
-        new mapboxgl.AttributionControl({
-          compact: true,
-          customAttribution: "Data: SPC NOAA / NEXRAD / IGO Quebec (MSP)",
-        }),
-        "top-right"
-      );
+      // *** NOUVELLE COUCHE DE BASE SANS CLÉ D'ACCÈS (CartoDB Dark Matter) ***
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CartoDB</a>',
+          maxZoom: 19,
+          subdomains: "abcd", // Sous-domaines typiques pour CartoDB
+        }
+      ).addTo(map);
+
+      // Correction standard pour le rendu de la carte Leaflet dans un conteneur Flexbox
+      map.whenReady(function () {
+        this.invalidateSize();
+      });
 
       // ----------------------------------------------------------------
       // Data Loading
       // ----------------------------------------------------------------
-      map.on("load", () => {
-        // HIDE THE LOADING SPINNER WHEN THE MAP IS READY (NEW)
-        const loadingOverlay = document.getElementById("loading-overlay");
-        // Use opacity transition for a smoother fade-out
+
+      // HIDE THE LOADING SPINNER
+      const loadingOverlay = document.getElementById("loading-overlay");
+      setTimeout(() => {
         loadingOverlay.style.opacity = "0";
-        // Remove it completely after the transition
         setTimeout(() => {
           loadingOverlay.style.display = "none";
-        }, 300); // Wait for CSS transition (0.3s)
+        }, 300);
+      }, 500); // 500ms d'attente pour être sûr
 
-        // ================================================================
-        // === IGO LAYERS (QUEBEC) ===
-        // ================================================================
+      // ================================================================
+      // === IGO LAYERS (QUEBEC) ===
+      // ================================================================
 
-        // --- IGO 1. PUBLIC TOPOGRAPHIC BASE MAP (TMS) - CORRECTED ---
-        map.addSource("igo-base-map", {
-          type: "raster",
-          tiles: [
-            "https://geoegl.msp.gouv.qc.ca/carto/tms/1.0.0/carte_gouv_qc_public@EPSG_3857/{z}/{x}/{y}.png",
-          ],
-          // Fix for 404 error: Mapbox handles Y-axis inversion for TMS service
-          scheme: "tms",
-          tileSize: 256,
-          minzoom: 0,
-          maxzoom: 18,
+      // --- IGO 1. PUBLIC TOPOGRAPHIC BASE MAP (Tile Layer) ---
+      const igoBaseLayer = L.tileLayer(
+        "https://geoegl.msp.gouv.qc.ca/carto/tms/1.0.0/carte_gouv_qc_public@EPSG_3857/{z}/{x}/{y}.png",
+        {
           attribution: "IGO Base Map: Government of Quebec",
-        });
-
-        map.addLayer({
-          id: "igo-base-layer",
-          type: "raster",
-          source: "igo-base-map",
-          // The 'waterway-label' layer is present in Mapbox styles like 'dark-v11'
-          beforeId: "waterway-label",
-          paint: {
-            "raster-opacity": 0.8,
-          },
-        });
-
-        // --- NEW LAYER 2. IGO HISTORICAL EVENTS (GeoJSON WFS) ---
-        const historiqueEventsUrl =
-          "https://geoegl.msp.gouv.qc.ca/apis/wss/historiquesc.fcgi?service=wfs&version=1.1.0&request=getfeature&typename=msp_risc_evenements_public&outputformat=geojson&srsName=epsg:4326";
-
-        map.addSource("historique-events-source", {
-          type: "geojson",
-          data: historiqueEventsUrl,
-          attribution: "Historical Events: MSP (IGO)",
-        });
-
-        // Visualization of historical events (points)
-        map.addLayer({
-          id: "historique-events-circle",
-          type: "circle",
-          source: "historique-events-source",
-          paint: {
-            "circle-color": "#800080", // Purple for historical data
-            "circle-radius": 6,
-            "circle-stroke-width": 1.5,
-            "circle-stroke-color": "#ffffff",
-            "circle-opacity": 0.8,
-          },
-          // Placed below the radar and weather alerts
-          beforeId: "nexrad-image",
-        });
-
-        // Add interactivity for historical events
-        map.on("click", "historique-events-circle", (e) => {
-          const properties = e.features[0].properties;
-          let description = "<strong>MSP Historical Event</strong><br>"; // Translated Popup Title
-
-          // Builds the popup content
-          for (const key in properties) {
-            if (
-              properties.hasOwnProperty(key) &&
-              properties[key] !== null &&
-              key !== "geom"
-            ) {
-              // Limit display of overly long values
-              const value =
-                typeof properties[key] === "string" &&
-                properties[key].length > 100
-                  ? properties[key].substring(0, 100) + "..."
-                  : properties[key];
-
-              description += `<strong>${key}</strong>: ${value}<br>`;
-            }
-          }
-
-          new mapboxgl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(description)
-            .addTo(map);
-        });
-
-        map.on("mouseenter", "historique-events-circle", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-
-        map.on("mouseleave", "historique-events-circle", () => {
-          map.getCanvas().style.cursor = "";
-        });
-
-        // ================================================================
-        // === WEATHER LAYERS (USA) - EXISTING CODE ===
-        // ================================================================
-
-        // --- 3. NEXRAD RADAR LAYER (Raster) ---
-
-        const radarTileUrl =
-          "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png";
-
-        map.addSource("nexrad-radar", {
-          type: "raster",
-          tiles: [radarTileUrl],
-          tileSize: 256,
-          minzoom: 0,
-          maxzoom: 12,
-          attribution:
-            'Radar: NEXRAD via <a href="https://mesonet.agron.iastate.edu/" target="_blank">Iowa State Mesonet</a>',
-        });
-
-        map.addLayer({
-          id: "nexrad-image",
-          type: "raster",
-          source: "nexrad-radar",
-          paint: {
-            "raster-opacity": 0.8,
-          },
-        });
-
-        // --- 4. SPC NOAA LAYER (GeoJSON) ---
-
-        map.addSource("spc-outlook", {
-          type: "geojson",
-          data: "https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson",
-        });
-
-        const spcColors = [
-          "match",
-          ["get", "DN"],
-          1,
-          "#FFFF00",
-          2,
-          "#FFA500",
-          3,
-          "#FF4500",
-          4,
-          "#FF0000",
-          "#CCCCCC",
-        ];
-
-        map.addLayer({
-          id: "spc-polygons",
-          type: "fill",
-          source: "spc-outlook",
-          beforeId: "waterway-label",
-          paint: {
-            "fill-color": spcColors,
-            "fill-opacity": 0.6,
-            "fill-outline-color": "#000000",
-          },
-        });
-
-        map.addLayer({
-          id: "spc-lines",
-          type: "line",
-          source: "spc-outlook",
-          layout: {},
-          paint: {
-            "line-color": "#000000",
-            "line-width": 2,
-          },
-        });
-
-        // --- 5. Interactivity: Popup and Cursor (SPC GeoJSON) ---
-
-        map.on("click", "spc-polygons", (e) => {
-          const properties = e.features[0].properties;
-          const description = Object.keys(properties)
-            .map((key) => `<strong>${key}</strong>: ${properties[key]}`)
-            .join("<br>");
-
-          new mapboxgl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(description)
-            .addTo(map);
-        });
-
-        map.on("mouseenter", "spc-polygons", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-
-        map.on("mouseleave", "spc-polygons", () => {
-          map.getCanvas().style.cursor = "";
-        });
-
-        // --- 6. Animation Function (Player) ---
-
-        document
-          .getElementById("play-button")
-          .addEventListener("click", toggleAnimation);
-
-        let animationInterval = null;
-        let isPlaying = false;
-        const animationSteps = [0.2, 0.4, 0.6, 0.8];
-        let currentStepIndex = 0;
-
-        function toggleAnimation() {
-          const button = document.getElementById("play-button");
-          const display = document.getElementById("time-display");
-
-          if (isPlaying) {
-            clearInterval(animationInterval);
-            isPlaying = false;
-            button.innerHTML = "▶️ Start Animation"; // Translated button text
-            display.textContent = "Time: Static"; // Translated time text
-            if (map.getLayer("spc-polygons")) {
-              map.setPaintProperty("spc-polygons", "fill-opacity", 0.6);
-            }
-          } else {
-            isPlaying = true;
-            button.innerHTML = "⏸️ Stop Animation"; // Translated button text
-
-            animationInterval = setInterval(() => {
-              currentStepIndex = (currentStepIndex + 1) % animationSteps.length;
-              const opacity = animationSteps[currentStepIndex];
-              const timeLabel = `Step ${currentStepIndex + 1} / 4`; // Translated label
-
-              if (map.getLayer("spc-polygons")) {
-                map.setPaintProperty("spc-polygons", "fill-opacity", opacity);
-              }
-
-              // Translated display text
-              display.textContent = `Time: ${timeLabel} (Opacity: ${opacity.toFixed(
-                1
-              )})`;
-            }, 500);
-          }
+          tms: true, // Indique que c'est un service TMS
+          opacity: 0.8,
+          maxZoom: 18,
         }
-      });
+      ).addTo(map);
+
+      // --- NEW LAYER 2. IGO HISTORICAL EVENTS (GeoJSON) ---
+      const historiqueEventsUrl =
+        "https://geoegl.msp.gouv.qc.ca/apis/wss/historiquesc.fcgi?service=wfs&version=1.1.0&request=getfeature&typename=msp_risc_evenements_public&outputformat=geojson&srsName=epsg:4326";
+
+      fetch(historiqueEventsUrl)
+        .then((response) => response.json())
+        .then((data) => {
+          const historiqueLayer = L.geoJSON(data, {
+            pointToLayer: function (feature, latlng) {
+              return L.circleMarker(latlng, {
+                radius: 6,
+                fillColor: "#800080", // Purple
+                color: "#ffffff", // White stroke
+                weight: 1.5,
+                opacity: 0.8,
+                fillOpacity: 0.8,
+              });
+            },
+            onEachFeature: function (feature, layer) {
+              // Création du contenu du popup
+              let description = "<strong>MSP Historical Event</strong><br>";
+              for (const key in feature.properties) {
+                if (feature.properties.hasOwnProperty(key)) {
+                  const value =
+                    typeof feature.properties[key] === "string" &&
+                    feature.properties[key].length > 100
+                      ? feature.properties[key].substring(0, 100) + "..."
+                      : feature.properties[key];
+                  if (value !== null && key !== "geom") {
+                    description += `<strong>${key}</strong>: ${value}<br>`;
+                  }
+                }
+              }
+              layer.bindPopup(description);
+            },
+          }).addTo(map);
+        })
+        .catch((error) =>
+          console.error("Error loading IGO historical events:", error)
+        );
+
+      // ================================================================
+      // === WEATHER LAYERS (USA) ===
+      // ================================================================
+
+      // --- 3. NEXRAD RADAR LAYER (Raster) ---
+      const radarTileUrl =
+        "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png";
+
+      const nexradLayer = L.tileLayer(radarTileUrl, {
+        attribution:
+          'Radar: NEXRAD via <a href="https://mesonet.agron.iastate.edu/" target="_blank">Iowa State Mesonet</a>',
+        opacity: 0.8,
+        maxZoom: 12,
+      }).addTo(map);
+
+      // --- 4. SPC NOAA LAYER (GeoJSON) ---
+
+      const spcColors = (dn) => {
+        switch (dn) {
+          case 1:
+            return "#FFFF00"; // Marginal
+          case 2:
+            return "#FFA500"; // Slight
+          case 3:
+            return "#FF4500"; // Enhanced / Moderate
+          case 4:
+            return "#FF0000"; // High
+          default:
+            return "#CCCCCC";
+        }
+      };
+
+      fetch(
+        "https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson"
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          const spcLayer = L.geoJSON(data, {
+            style: function (feature) {
+              return {
+                fillColor: spcColors(feature.properties.DN),
+                weight: 2, // Line width (outline)
+                opacity: 1, // Line opacity (outline)
+                color: "black", // Line color (outline)
+                fillOpacity: 0.6,
+              };
+            },
+            onEachFeature: function (feature, layer) {
+              // Création du contenu du popup
+              const properties = feature.properties;
+              const description = Object.keys(properties)
+                .map((key) => `<strong>${key}</strong>: ${properties[key]}`)
+                .join("<br>");
+
+              layer.bindPopup(description);
+
+              // Gestion du curseur au survol (similaire à Mapbox)
+              layer.on("mouseover", function () {
+                map.getContainer().style.cursor = "pointer";
+              });
+              layer.on("mouseout", function () {
+                map.getContainer().style.cursor = "";
+              });
+            },
+          }).addTo(map);
+
+          // --- 5. Animation Function (Player) ---
+
+          document
+            .getElementById("play-button")
+            .addEventListener("click", toggleAnimation);
+
+          let animationInterval = null;
+          let isPlaying = false;
+          const animationSteps = [0.2, 0.4, 0.6, 0.8];
+          let currentStepIndex = 0;
+
+          function toggleAnimation() {
+            const button = document.getElementById("play-button");
+            const display = document.getElementById("time-display");
+
+            if (isPlaying) {
+              clearInterval(animationInterval);
+              isPlaying = false;
+              button.innerHTML = "▶️ Start Animation"; // Texte du bouton traduit
+              display.textContent = "Time: Static"; // Texte du temps traduit
+              // Remet l'opacité à la valeur par défaut
+              spcLayer.setStyle({ fillOpacity: 0.6 });
+            } else {
+              isPlaying = true;
+              button.innerHTML = "⏸️ Stop Animation"; // Texte du bouton traduit
+
+              animationInterval = setInterval(() => {
+                currentStepIndex =
+                  (currentStepIndex + 1) % animationSteps.length;
+                const opacity = animationSteps[currentStepIndex];
+                const timeLabel = `Step ${currentStepIndex + 1} / 4`; // Label traduit
+
+                // Met à jour l'opacité de la couche GeoJSON (Leaflet)
+                spcLayer.setStyle({ fillOpacity: opacity });
+
+                // Texte de l'affichage traduit
+                display.textContent = `Time: ${timeLabel} (Opacity: ${opacity.toFixed(
+                  1
+                )})`;
+              }, 500);
+            }
+          }
+        })
+        .catch((error) => console.error("Error loading SPC data:", error));
     </script>
   </body>
 </html>
