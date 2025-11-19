@@ -8,7 +8,6 @@
     <!-- Tailwind (CDN for quick demo) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      // Tailwind config (enable class-based dark mode)
       tailwind.config = { darkMode: "class" };
     </script>
 
@@ -24,15 +23,13 @@
     />
 
     <style>
-      /* Small custom styles in addition to Tailwind */
-
-      /* Map must take full available area */
+      /* Map sizing */
       #map {
         height: 100%;
         width: 100%;
       }
 
-      /* Pulse marker styles (divIcon inner HTML) */
+      /* Pulse marker */
       .pulse {
         position: relative;
         width: 18px;
@@ -68,7 +65,7 @@
         }
       }
 
-      /* Custom cluster style: larger, glass card look */
+      /* Cluster */
       .custom-cluster {
         background: rgba(255, 255, 255, 0.95);
         border-radius: 999px;
@@ -78,12 +75,6 @@
         color: #111827;
         font-weight: 700;
       }
-      .leaflet-container {
-        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
-          "Helvetica Neue", Arial;
-      }
-
-      /* Dark mode overrides for leaflet controls and cluster */
       .dark .custom-cluster {
         background: rgba(17, 24, 39, 0.95);
         color: #fff;
@@ -105,7 +96,7 @@
         }
       }
 
-      /* Skeleton blocks */
+      /* Skeleton */
       .skeleton {
         background: linear-gradient(
           90deg,
@@ -126,22 +117,29 @@
         }
       }
 
-      /* Responsive tweaks to ensure full-screen map on mobile when sidebar collapsed */
+      /* small tweaks */
+      .leaflet-container {
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial;
+      }
       @media (max-width: 768px) {
         #map {
           top: 0;
           left: 0;
         }
+        aside {
+          display: none;
+        }
       }
     </style>
   </head>
+
   <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
     <!-- Top bar -->
     <div
       class="flex items-center justify-between px-4 py-3 shadow-sm bg-white dark:bg-gray-800"
     >
       <div class="flex items-center gap-3">
-        <!-- Sidebar toggle (mobile) -->
         <button
           id="toggle-sidebar"
           aria-label="Toggle sidebar"
@@ -164,8 +162,8 @@
         </button>
 
         <div class="flex items-center gap-3">
-          <!-- logo using provided local path (will be transformed by the environment) -->
           <img
+            id="logo"
             src="/assets/log.png"
             alt="HQ logo"
             class="h-8 w-8 rounded-md object-cover border"
@@ -175,9 +173,8 @@
       </div>
 
       <div class="flex items-center gap-4">
-        <!-- Dark mode toggle -->
-        <div class="flex items-center gap-2">
-          <span class="text-sm">Light</span>
+        <div class="flex items-center gap-2 text-sm">
+          <span>Light</span>
           <button
             id="dark-toggle"
             class="relative inline-flex items-center h-6 w-11 rounded-full bg-gray-200 dark:bg-gray-600 focus:outline-none"
@@ -187,10 +184,9 @@
               class="transform translate-x-0 inline-block h-5 w-5 bg-white rounded-full shadow transition-transform"
             ></span>
           </button>
-          <span class="text-sm">Dark</span>
+          <span>Dark</span>
         </div>
 
-        <!-- Refresh button -->
         <button
           id="refresh"
           title="Refresh outages"
@@ -216,7 +212,7 @@
       <!-- Sidebar -->
       <aside
         id="sidebar"
-        class="w-80 bg-white dark:bg-gray-800 p-4 overflow-y-auto transition-transform transform z-40"
+        class="w-80 bg-white dark:bg-gray-800 p-4 overflow-y-auto z-40"
       >
         <div class="flex items-start justify-between gap-2">
           <div>
@@ -236,7 +232,6 @@
           </button>
         </div>
 
-        <!-- stats / skeleton while loading -->
         <div id="stats" class="mt-6 space-y-3">
           <div class="flex items-center justify-between">
             <div>
@@ -280,6 +275,27 @@
             >
           </div>
         </div>
+
+        <!-- GitHub Button -->
+        <div class="mt-8 pt-4 border-t border-gray-300 dark:border-gray-700">
+          <a
+            href="https://github.com/drjoeycadieux/spc-noaa-website/blob/main/pages/index-hq.html"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center justify-center gap-2 p-2 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+          >
+            <svg
+              class="h-5 w-5 fill-current"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 .297c-6.63 0-12 5.373-12 12 0 5.302 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.725-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.757-1.333-1.757-1.089-.744.084-.729.084-.729 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.3-5.466-1.334-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23a11.52 11.52 0 013.003-.404c1.02.005 2.045.138 3.003.404 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.43.37.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .319.21.694.825.575C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+              />
+            </svg>
+            <span class="font-medium">GitHub</span>
+          </a>
+        </div>
       </aside>
 
       <!-- Map container -->
@@ -312,7 +328,7 @@
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
     <script>
-      // Shortcuts to elements
+      // Elements
       const htmlEl = document.documentElement;
       const darkToggle = document.getElementById("dark-toggle");
       const darkKnob = document.getElementById("dark-knob");
@@ -324,7 +340,7 @@
       const spinner = document.getElementById("spinner");
       const refreshBtn = document.getElementById("refresh");
 
-      // Initialize dark mode from localStorage
+      // Dark mode state
       const prefersDark =
         window.matchMedia &&
         window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -333,44 +349,35 @@
         htmlEl.classList.add("dark");
         darkKnob.classList.add("translate-x-5");
       }
-
       darkToggle.addEventListener("click", () => {
         const isDark = htmlEl.classList.toggle("dark");
         localStorage.setItem("hq-dark", isDark ? "1" : "0");
         darkKnob.classList.toggle("translate-x-5");
       });
 
-      // Sidebar collapse (desktop) & toggle (mobile)
+      // Sidebar toggle
       collapseBtn.addEventListener("click", () => {
         sidebar.style.display = "none";
       });
       toggleSidebarBtn.addEventListener("click", () => {
-        if (
-          sidebar.style.display === "none" ||
-          getComputedStyle(sidebar).transform === "translateX(-100%)"
-        ) {
-          sidebar.style.display = "block";
-        } else {
-          sidebar.style.display = "none";
-        }
+        sidebar.style.display =
+          getComputedStyle(sidebar).display === "none" ? "block" : "none";
       });
 
-      // Create map
+      // Map
       const map = L.map("map", { zoomControl: true }).setView([46.8, -71.2], 7);
-
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
-        attribution: "Developed By Joey Cadieux",
+        attribution: "© OpenStreetMap contributors",
       }).addTo(map);
 
-      // Custom cluster group with nicer visual
+      // Cluster group
       const outageCluster = L.markerClusterGroup({
         chunkedLoading: true,
         showCoverageOnHover: false,
         maxClusterRadius: 60,
         iconCreateFunction: function (cluster) {
           const count = cluster.getChildCount();
-          const size = count < 10 ? "small" : count < 50 ? "medium" : "large";
           const html = `<div class="custom-cluster p-2">${count}</div>`;
           return L.divIcon({
             html,
@@ -384,7 +391,7 @@
       const BIS_URL =
         "http://pannes.hydroquebec.com/pannes/donnees/v3_0/bisversion.json";
       const PROXY = "https://corsproxy.io/?";
-      const REFRESH_INTERVAL = 300000; // 5 minutes
+      const REFRESH_INTERVAL = 300000;
 
       function createPulseIcon() {
         return L.divIcon({
@@ -399,7 +406,6 @@
         statusText.textContent = "Fetching BIS version…";
         statusSub.textContent = "";
         spinner.style.display = "block";
-
         fetch(PROXY + BIS_URL)
           .then((r) => {
             if (!r.ok) throw new Error(r.status);
@@ -433,18 +439,15 @@
               new Date().toLocaleString();
 
             outageCluster.clearLayers();
-
             data.pannes.forEach((p) => {
               try {
                 const coords = JSON.parse(p[4]);
                 const lon = coords[0],
                   lat = coords[1];
                 const nbClients = p[7];
-
                 const marker = L.marker([lat, lon], {
                   icon: createPulseIcon(),
                 });
-
                 const popupHtml = `
                   <div class="text-sm">
                     <strong>Outage</strong><br/>
@@ -467,7 +470,6 @@
               }
             });
 
-            // fit to cluster bounds, but don't zoom too far in
             const bounds = outageCluster.getBounds();
             if (bounds.isValid())
               map.fitBounds(bounds, { padding: [60, 60], maxZoom: 10 });
@@ -482,11 +484,9 @@
 
       fetchOutages();
       setInterval(fetchOutages, REFRESH_INTERVAL);
-
-      // refresh button
       refreshBtn && refreshBtn.addEventListener("click", fetchOutages);
 
-      // Accessibility: close sidebar when clicking outside on mobile
+      // Close sidebar when clicking outside on mobile
       document.addEventListener("click", (ev) => {
         if (
           window.innerWidth <= 768 &&
@@ -497,7 +497,7 @@
         }
       });
 
-      // Ensure the map invalidates size when sidebar toggles
+      // Invalidate map size when sidebar toggles
       const obs = new MutationObserver(() => {
         setTimeout(() => map.invalidateSize(), 300);
       });
