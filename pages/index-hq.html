@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Hydro-Québec Outage Map — Modern</title>
+
+    <!-- Tailwind (CDN for quick demo) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Tailwind config (enable class-based dark mode)
+      tailwind.config = { darkMode: "class" };
+    </script>
+
+    <!-- Leaflet & MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"
+    />
+
+    <style>
+      /* Small custom styles in addition to Tailwind */
+
+      /* Map must take full available area */
+      #map {
+        height: 100%;
+        width: 100%;
+      }
+
+      /* Pulse marker styles (divIcon inner HTML) */
+      .pulse {
+        position: relative;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #ff4500;
+        box-shadow: 0 0 8px rgba(255, 69, 0, 0.6);
+        border: 2px solid #fff;
+      }
+      .pulse::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(255, 69, 0, 0.15);
+        animation: pulse 1.6s infinite ease-out;
+      }
+      @keyframes pulse {
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 0.9;
+        }
+        70% {
+          transform: translate(-50%, -50%) scale(2.4);
+          opacity: 0;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      /* Custom cluster style: larger, glass card look */
+      .custom-cluster {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 999px;
+        padding: 6px 10px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+        border: 2px solid rgba(0, 0, 0, 0.06);
+        color: #111827;
+        font-weight: 700;
+      }
+      .leaflet-container {
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial;
+      }
+
+      /* Dark mode overrides for leaflet controls and cluster */
+      .dark .custom-cluster {
+        background: rgba(17, 24, 39, 0.95);
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.06);
+      }
+
+      /* Spinner */
+      .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.08);
+        border-top-color: rgba(0, 0, 0, 0.6);
+        border-radius: 9999px;
+        width: 36px;
+        height: 36px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Skeleton blocks */
+      .skeleton {
+        background: linear-gradient(
+          90deg,
+          rgba(0, 0, 0, 0.06),
+          rgba(0, 0, 0, 0.02),
+          rgba(0, 0, 0, 0.06)
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.6s infinite linear;
+        border-radius: 6px;
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      /* Responsive tweaks to ensure full-screen map on mobile when sidebar collapsed */
+      @media (max-width: 768px) {
+        #map {
+          top: 0;
+          left: 0;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+    <!-- Top bar -->
+    <div
+      class="flex items-center justify-between px-4 py-3 shadow-sm bg-white dark:bg-gray-800"
+    >
+      <div class="flex items-center gap-3">
+        <!-- Sidebar toggle (mobile) -->
+        <button
+          id="toggle-sidebar"
+          aria-label="Toggle sidebar"
+          class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
+
+        <div class="flex items-center gap-3">
+          <!-- logo using provided local path (will be transformed by the environment) -->
+          <img
+            src="/assets/log.png"
+            alt="HQ logo"
+            class="h-8 w-8 rounded-md object-cover border"
+          />
+          <h1 class="text-lg font-semibold">Hydro‑Québec Outage Map</h1>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- Dark mode toggle -->
+        <div class="flex items-center gap-2">
+          <span class="text-sm">Light</span>
+          <button
+            id="dark-toggle"
+            class="relative inline-flex items-center h-6 w-11 rounded-full bg-gray-200 dark:bg-gray-600 focus:outline-none"
+          >
+            <span
+              id="dark-knob"
+              class="transform translate-x-0 inline-block h-5 w-5 bg-white rounded-full shadow transition-transform"
+            ></span>
+          </button>
+          <span class="text-sm">Dark</span>
+        </div>
+
+        <!-- Refresh button -->
+        <button
+          id="refresh"
+          title="Refresh outages"
+          class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M2 10a8 8 0 1116 0 1 1 0 11-2 0 6 6 0 10-12 0 1 1 0 11-2 0z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex h-[calc(100vh-56px)]">
+      <!-- Sidebar -->
+      <aside
+        id="sidebar"
+        class="w-80 bg-white dark:bg-gray-800 p-4 overflow-y-auto transition-transform transform z-40"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-50">
+              Information
+            </h2>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+              This map shows current Hydro‑Québec outages across Québec. Tap a
+              marker for details.
+            </p>
+          </div>
+          <button
+            id="collapse-btn"
+            class="text-sm text-gray-500 dark:text-gray-300 hover:text-gray-700"
+          >
+            Collapse
+          </button>
+        </div>
+
+        <!-- stats / skeleton while loading -->
+        <div id="stats" class="mt-6 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Total Outages
+              </p>
+              <p id="total-outages" class="text-2xl font-semibold">—</p>
+            </div>
+            <div id="stat-skeleton" class="skeleton h-10 w-10 rounded-md"></div>
+          </div>
+
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Last Update</p>
+            <p id="last-update" class="text-sm">—</p>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-200">
+            Instructions
+          </h3>
+          <ul
+            class="mt-2 list-disc list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1"
+          >
+            <li>Zoom and pan to explore outages.</li>
+            <li>Tap markers for affected customers & estimated restoration.</li>
+            <li>Use the dark mode toggle at the top-right.</li>
+          </ul>
+        </div>
+
+        <div class="mt-6">
+          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-200">
+            Legend
+          </h3>
+          <div class="mt-2 flex items-center gap-3">
+            <span
+              class="inline-block h-3 w-3 rounded-full bg-[#ff4500] ring-2 ring-white dark:ring-gray-900"
+            ></span>
+            <span class="text-sm text-gray-600 dark:text-gray-300"
+              >Active outage</span
+            >
+          </div>
+        </div>
+      </aside>
+
+      <!-- Map container -->
+      <main class="flex-1 relative">
+        <div id="map" class="absolute inset-0"></div>
+
+        <!-- floating status card -->
+        <div
+          id="status"
+          class="absolute top-6 right-6 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md flex items-center gap-3"
+        >
+          <div id="spinner" class="spinner"></div>
+          <div>
+            <div id="status-text" class="text-sm font-medium">
+              Loading outages…
+            </div>
+            <div
+              id="status-sub"
+              class="text-xs text-gray-500 dark:text-gray-400"
+            >
+              Fetching data
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Leaflet & markercluster JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+    <script>
+      // Shortcuts to elements
+      const htmlEl = document.documentElement;
+      const darkToggle = document.getElementById("dark-toggle");
+      const darkKnob = document.getElementById("dark-knob");
+      const toggleSidebarBtn = document.getElementById("toggle-sidebar");
+      const sidebar = document.getElementById("sidebar");
+      const collapseBtn = document.getElementById("collapse-btn");
+      const statusText = document.getElementById("status-text");
+      const statusSub = document.getElementById("status-sub");
+      const spinner = document.getElementById("spinner");
+      const refreshBtn = document.getElementById("refresh");
+
+      // Initialize dark mode from localStorage
+      const prefersDark =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const saved = localStorage.getItem("hq-dark");
+      if (saved === "1" || (saved === null && prefersDark)) {
+        htmlEl.classList.add("dark");
+        darkKnob.classList.add("translate-x-5");
+      }
+
+      darkToggle.addEventListener("click", () => {
+        const isDark = htmlEl.classList.toggle("dark");
+        localStorage.setItem("hq-dark", isDark ? "1" : "0");
+        darkKnob.classList.toggle("translate-x-5");
+      });
+
+      // Sidebar collapse (desktop) & toggle (mobile)
+      collapseBtn.addEventListener("click", () => {
+        sidebar.style.display = "none";
+      });
+      toggleSidebarBtn.addEventListener("click", () => {
+        if (
+          sidebar.style.display === "none" ||
+          getComputedStyle(sidebar).transform === "translateX(-100%)"
+        ) {
+          sidebar.style.display = "block";
+        } else {
+          sidebar.style.display = "none";
+        }
+      });
+
+      // Create map
+      const map = L.map("map", { zoomControl: true }).setView([46.8, -71.2], 7);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "© OpenStreetMap contributors",
+      }).addTo(map);
+
+      // Custom cluster group with nicer visual
+      const outageCluster = L.markerClusterGroup({
+        chunkedLoading: true,
+        showCoverageOnHover: false,
+        maxClusterRadius: 60,
+        iconCreateFunction: function (cluster) {
+          const count = cluster.getChildCount();
+          const size = count < 10 ? "small" : count < 50 ? "medium" : "large";
+          const html = `<div class="custom-cluster p-2">${count}</div>`;
+          return L.divIcon({
+            html,
+            className: "cluster-wrapper",
+            iconSize: L.point(40, 40),
+          });
+        },
+      });
+      map.addLayer(outageCluster);
+
+      const BIS_URL =
+        "http://pannes.hydroquebec.com/pannes/donnees/v3_0/bisversion.json";
+      const PROXY = "https://corsproxy.io/?";
+      const REFRESH_INTERVAL = 300000; // 5 minutes
+
+      function createPulseIcon() {
+        return L.divIcon({
+          className: "pulse-icon",
+          html: '<div class="pulse" />',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        });
+      }
+
+      function fetchOutages() {
+        statusText.textContent = "Fetching BIS version…";
+        statusSub.textContent = "";
+        spinner.style.display = "block";
+
+        fetch(PROXY + BIS_URL)
+          .then((r) => {
+            if (!r.ok) throw new Error(r.status);
+            return r.json();
+          })
+          .then((bis) =>
+            fetch(
+              PROXY +
+                `http://pannes.hydroquebec.com/pannes/donnees/v3_0/bismarkers${bis}.json`
+            )
+          )
+          .then((r) => {
+            if (!r.ok) throw new Error(r.status);
+            return r.json();
+          })
+          .then((data) => {
+            spinner.style.display = "none";
+            if (!data || !data.pannes || data.pannes.length === 0) {
+              statusText.textContent = "No active outages";
+              document.getElementById("total-outages").textContent = "0";
+              document.getElementById("last-update").textContent =
+                new Date().toLocaleString();
+              outageCluster.clearLayers();
+              return;
+            }
+
+            statusText.textContent = `Loaded ${data.pannes.length} outages`;
+            document.getElementById("total-outages").textContent =
+              data.pannes.length;
+            document.getElementById("last-update").textContent =
+              new Date().toLocaleString();
+
+            outageCluster.clearLayers();
+
+            data.pannes.forEach((p) => {
+              try {
+                const coords = JSON.parse(p[4]);
+                const lon = coords[0],
+                  lat = coords[1];
+                const nbClients = p[7];
+
+                const marker = L.marker([lat, lon], {
+                  icon: createPulseIcon(),
+                });
+
+                const popupHtml = `
+                  <div class="text-sm">
+                    <strong>Outage</strong><br/>
+                    <strong>Customers affected:</strong> ${nbClients}<br/>
+                    <strong>Start:</strong> ${new Date(
+                      p[1]
+                    ).toLocaleString()}<br/>
+                    <strong>Estimated restoration:</strong> ${
+                      p[2] !== "null"
+                        ? new Date(p[2]).toLocaleString()
+                        : "Unknown"
+                    }<br/>
+                    <strong>Status code:</strong> ${p[5]}
+                  </div>
+                `;
+                marker.bindPopup(popupHtml, { maxWidth: 260 });
+                outageCluster.addLayer(marker);
+              } catch (e) {
+                console.warn("bad panne entry", e, p);
+              }
+            });
+
+            // fit to cluster bounds, but don't zoom too far in
+            const bounds = outageCluster.getBounds();
+            if (bounds.isValid())
+              map.fitBounds(bounds, { padding: [60, 60], maxZoom: 10 });
+          })
+          .catch((err) => {
+            console.error(err);
+            spinner.style.display = "none";
+            statusText.textContent = "Error loading outages";
+            statusSub.textContent = err.message || "";
+          });
+      }
+
+      fetchOutages();
+      setInterval(fetchOutages, REFRESH_INTERVAL);
+
+      // refresh button
+      refreshBtn && refreshBtn.addEventListener("click", fetchOutages);
+
+      // Accessibility: close sidebar when clicking outside on mobile
+      document.addEventListener("click", (ev) => {
+        if (
+          window.innerWidth <= 768 &&
+          !sidebar.contains(ev.target) &&
+          !toggleSidebarBtn.contains(ev.target)
+        ) {
+          sidebar.style.display = "none";
+        }
+      });
+
+      // Ensure the map invalidates size when sidebar toggles
+      const obs = new MutationObserver(() => {
+        setTimeout(() => map.invalidateSize(), 300);
+      });
+      obs.observe(sidebar, { attributes: true, attributeFilter: ["style"] });
+    </script>
+  </body>
+</html>
