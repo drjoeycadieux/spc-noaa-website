@@ -22,6 +22,47 @@
     />
 
     <style>
+      /* --- Media Query pour les appareils mobiles/petits écrans (max 768px) --- */
+      @media (max-width: 768px) {
+        /* 1. Conteneur principal (empilement vertical) */
+        #main-container {
+          /* Change l'alignement pour empiler la sidebar au-dessus de la carte */
+          flex-direction: column;
+        }
+
+        /* 2. Style de l'en-tête pour les petits écrans */
+        header {
+          padding: 15px 20px; /* Moins de padding */
+          font-size: 1.4em;
+          /* Cache les liens externes pour simplifier l'en-tête */
+          display: block; /* S'assure que le titre prend toute la largeur */
+          text-align: center;
+        }
+        .header-links {
+          display: none; /* Cache les liens de l'en-tête (optionnel) */
+        }
+
+        /* 3. Barre latérale (prend toute la largeur) */
+        #sidebar {
+          width: auto; /* Prend toute la largeur disponible */
+          padding: 20px; /* Ajuste le padding */
+          height: auto; /* Hauteur définie par le contenu */
+          /* Retire l'ombre latérale qui n'a plus de sens en haut/bas */
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+          /* Ajoute une bordure inférieure si elle est en haut */
+          border-bottom: 1px solid #444444;
+          /* Pour s'assurer qu'elle est en haut */
+          order: -1;
+        }
+
+        /* 4. Carte (prend l'espace vertical restant) */
+        #map {
+          /* La carte doit avoir une hauteur définie, car le flex-grow: 1 ne suffit pas */
+          /* Utilise l'espace vertical restant (100vh - hauteur de l'en-tête - hauteur de la barre latérale - hauteur du pied de page) */
+          /* Une hauteur fixe est souvent plus simple ou une hauteur par rapport à la vue */
+          height: 60vh; /* Utilise 60% de la hauteur de la vue pour la carte */
+        }
+      }
       /* CSS Base */
       body {
         margin: 0;
