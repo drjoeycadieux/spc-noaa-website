@@ -27,14 +27,13 @@
         display: flex;
         flex-direction: column;
         height: 100vh;
-        /* DARK MODE: Very dark background */
+        /* Dark theme kept for the UI/Sidebar */
         background-color: #1e1e1e;
-        color: #cccccc; /* Default text color */
+        color: #cccccc;
       }
 
       /* --- Header Style --- */
       header {
-        /* DARK MODE: Neutral dark header */
         background-color: #333333;
         color: white;
         padding: 18px 30px;
@@ -61,7 +60,6 @@
       }
 
       .header-links a:hover {
-        /* DARK MODE: Slightly lighter hover */
         background-color: #555555;
       }
 
@@ -75,7 +73,6 @@
       /* --- Sidebar Style --- */
       #sidebar {
         width: 320px;
-        /* DARK MODE: Slightly lighter than body */
         background-color: #2d2d2d;
         padding: 25px;
         overflow-y: auto;
@@ -88,9 +85,7 @@
       #sidebar h3,
       #sidebar h4 {
         margin-top: 0;
-        /* DARK MODE: Light text for titles */
         color: #ffffff;
-        /* DARK MODE: Darker border line */
         border-bottom: 1px solid #444444;
         padding-bottom: 8px;
         margin-bottom: 20px;
@@ -104,9 +99,8 @@
         font-size: 0.95em;
       }
 
-      /* Player and Toggle Button Style */
-      #play-button,
-      #toggle-base-map {
+      /* Player Button Style (Toggle button removed) */
+      #play-button {
         background-color: #4caf50;
         color: white;
         border: none;
@@ -118,31 +112,20 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         transition: background-color 0.3s, transform 0.1s;
         width: 100%;
-        margin-bottom: 10px; /* Space between buttons */
+        margin-bottom: 10px;
       }
 
-      #play-button:disabled,
-      #toggle-base-map:disabled {
+      #play-button:disabled {
         background-color: #555555;
         cursor: not-allowed;
       }
 
-      #play-button:hover:not(:disabled),
-      #toggle-base-map:hover:not(:disabled) {
+      #play-button:hover:not(:disabled) {
         background-color: #388e3c;
       }
 
-      #play-button:active:not(:disabled),
-      #toggle-base-map:active:not(:disabled) {
+      #play-button:active:not(:disabled) {
         transform: scale(0.98);
-      }
-
-      /* Light Mode Button Styling */
-      .light-mode-active {
-        background-color: #1e88e5 !important; /* Blue for light mode */
-      }
-      .light-mode-active:hover:not(:disabled) {
-        background-color: #1565c0 !important;
       }
 
       /* --- Map Style --- */
@@ -168,7 +151,6 @@
         width: 25px;
         height: 25px;
         margin-right: 15px;
-        /* Ensure border is visible on dark background */
         border: 2px solid #000;
         opacity: 0.7;
         border-radius: 4px;
@@ -177,34 +159,29 @@
       /* Horizontal separator style */
       hr {
         border: 0;
-        /* DARK MODE: Darker separator line */
         border-top: 1px solid #444444;
         margin: 20px 0;
       }
 
       /* --- Footer Style --- */
       footer {
-        /* DARK MODE: Matches header/neutral dark */
         background-color: #333333;
         color: #ffffff;
         padding: 12px 30px;
         text-align: center;
         font-size: 0.8em;
-        /* Ensures footer is below main content */
         flex-shrink: 0;
         border-top: 1px solid #444444;
       }
 
-      /* --- Loading Spinner Styles (NEW) --- */
+      /* --- Loading Spinner Styles --- */
       #loading-overlay {
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        /* Must cover the map area */
         z-index: 100;
-        /* Dark background for contrast */
         background-color: rgba(30, 30, 30, 0.95);
         display: flex;
         flex-direction: column;
@@ -213,14 +190,13 @@
         color: white;
         font-size: 1.2em;
         font-weight: 400;
-        /* Initially set to show */
         transition: opacity 0.3s;
       }
 
       /* The actual spinner CSS (using border trick) */
       .spinner {
-        border: 8px solid #444444; /* Light grey border */
-        border-top: 8px solid #4caf50; /* Green/Accent color for spin */
+        border: 8px solid #444444;
+        border-top: 8px solid #4caf50;
         border-radius: 50%;
         width: 50px;
         height: 50px;
@@ -239,12 +215,10 @@
 
       /* --- Media Query for Mobile/Small Screens (max 768px) --- */
       @media (max-width: 768px) {
-        /* 1. Main Container (vertical stacking) */
         #main-container {
           flex-direction: column;
         }
 
-        /* 2. Header Style */
         header {
           padding: 15px 20px;
           font-size: 1.4em;
@@ -255,19 +229,17 @@
           display: none;
         }
 
-        /* 3. Sidebar (full width) */
         #sidebar {
-          width: auto; /* Takes full available width */
-          padding: 20px; /* Adjust padding */
-          height: auto; /* Height defined by content */
+          width: auto;
+          padding: 20px;
+          height: auto;
           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
           border-bottom: 1px solid #444444;
           order: -1;
         }
 
-        /* 4. Map (takes remaining vertical space and must have a fixed height) */
         #map {
-          height: 60vh; /* IMPORTANT for mobile view */
+          height: 60vh;
         }
       }
     </style>
@@ -310,7 +282,7 @@
 
         <h4>Active Layers</h4>
         <ul id="active-layers-list">
-          <li id="base-map-status">**CartoDB Dark Base Map**</li>
+          <li id="base-map-status">**OSM Standard Base Map**</li>
           <li>**IGO Historical Events** (GeoJSON)</li>
           <li>NEXRAD Radar (Tile Layer)</li>
           <li id="spc-layer-status">SPC NOAA Forecasts (GeoJSON)</li>
@@ -319,14 +291,12 @@
         <hr />
 
         <h4>Data Controls</h4>
-        <button id="toggle-base-map">💡 Switch to Light Map</button>
         <button id="play-button" disabled>▶️ Start Animation</button>
         <div
           id="time-display"
           style="
             margin-top: 15px;
             font-weight: 700;
-            /* DARK MODE: Light text for time display */
             color: #cccccc;
             text-align: center;
           "
@@ -363,11 +333,10 @@
 
       // Layer References
       let spcLayer = null;
-      let capLayer = null; // Reference for the CAP alert layer
+      let capLayer = null;
       let animationInterval = null;
       let isPlaying = false;
-      let currentBaseLayer = null;
-      let isDarkMode = true;
+      let currentBaseLayer = null; // Still needed to hold the light map reference
 
       let currentStepIndex = 0;
       const animationSteps = [0.2, 0.4, 0.6, 0.8];
@@ -378,19 +347,10 @@
       const timeDisplay = document.getElementById("time-display");
       const spcStatus = document.getElementById("spc-layer-status");
       const baseMapStatus = document.getElementById("base-map-status");
-      const toggleButton = document.getElementById("toggle-base-map");
-      const activeLayersList = document.getElementById("active-layers-list");
+      // const toggleButton = document.getElementById("toggle-base-map"); // REMOVED
 
-      // Tile Layer Definitions
+      // Tile Layer Definitions (Only the Light Map remains)
       const baseMaps = {
-        dark: L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-          {
-            attribution: "&copy; CARTO Dark | Sources: OSM, NEXRAD, IGO, MSC",
-            maxZoom: 19,
-            subdomains: "abcd",
-          }
-        ),
         light: L.tileLayer(
           "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
           {
@@ -423,20 +383,20 @@
         if (!severity) return "gray";
         switch (severity.toLowerCase()) {
           case "severe":
-            return "#FF00FF"; // Magenta
+            return "#FF00FF";
           case "extreme":
-            return "#990099"; // Darker Purple
+            return "#990099";
           case "moderate":
-            return "#FF8C00"; // Dark Orange
+            return "#FF8C00";
           case "minor":
-            return "#00BFFF"; // Deep Sky Blue
+            return "#00BFFF";
           default:
-            return "#6495ED"; // Cornflower Blue
+            return "#6495ED";
         }
       };
 
       // ----------------------------------------------------------------
-      // Leaflet Setup & Base Layer Toggle
+      // Leaflet Setup (Simplified)
       // ----------------------------------------------------------------
 
       function setupMap() {
@@ -448,36 +408,17 @@
           })
           .addTo(map);
 
-        currentBaseLayer = baseMaps.dark;
+        // Initialize with the Light Map
+        currentBaseLayer = baseMaps.light;
         currentBaseLayer.addTo(map);
-        baseMapStatus.textContent = "**CartoDB Dark Base Map**";
+        baseMapStatus.textContent = "**OSM Standard Base Map**";
 
         map.whenReady(function () {
           this.invalidateSize();
         });
       }
 
-      function toggleBaseMap() {
-        if (currentBaseLayer) {
-          map.removeLayer(currentBaseLayer);
-        }
-
-        if (isDarkMode) {
-          currentBaseLayer = baseMaps.light;
-          toggleButton.innerHTML = "🌙 Switch to Dark Map";
-          baseMapStatus.textContent = "**OSM Standard Base Map**";
-          toggleButton.classList.add("light-mode-active");
-          isDarkMode = false;
-        } else {
-          currentBaseLayer = baseMaps.dark;
-          toggleButton.innerHTML = "💡 Switch to Light Map";
-          baseMapStatus.textContent = "**CartoDB Dark Base Map**";
-          toggleButton.classList.remove("light-mode-active");
-          isDarkMode = true;
-        }
-
-        currentBaseLayer.addTo(map).bringToBack();
-      }
+      // The toggleBaseMap function is REMOVED since there is only one base map.
 
       // ----------------------------------------------------------------
       // CAP Alert XML to GeoJSON Conversion Logic
@@ -787,7 +728,7 @@
         loadWeatherLayers();
 
         // --- MSC CAP ALERT DATA LOADING ---
-        // Set the specific file name
+        // Using the specific file name provided by the user.
         const capAlertUrl = "T_WWCN11_C_CWVR_202511190220_1187808547.cap";
 
         // Placeholder CAP-XML string (used if fetch fails)
@@ -841,7 +782,7 @@
 
         // Event listeners
         playButton.addEventListener("click", toggleAnimation);
-        toggleButton.addEventListener("click", toggleBaseMap);
+        // Toggle map event listener removed
 
         // Hide loading spinner
         setTimeout(() => {
