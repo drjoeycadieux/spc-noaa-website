@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Weather and Geomatics Alerts - SPC / NEXRAD / IGO</title>
+    <title>Weather and Geomatics Alerts - SPC / NEXRAD / IGO / MSC</title>
     <meta
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
@@ -274,7 +274,7 @@
   </head>
   <body>
     <header>
-      <div>Weather and Geomatics Alerts - SPC / NEXRAD / IGO</div>
+      <div>Weather and Geomatics Alerts - SPC / NEXRAD / IGO / **MSC**</div>
 
       <div class="header-links">
         <a href="https://github.com/drjoeycadieux" target="_blank">
@@ -345,7 +345,7 @@
 
     <footer>
       **Map and Data Sources** | &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO
-      Québec (MSP). For educational and non-commercial use.
+      Québec (MSP), **MSC CAP**. For educational and non-commercial use.
     </footer>
 
     <script>
@@ -361,15 +361,16 @@
         attributionControl: false,
       });
 
-      // Layer References (Declared globally for access by functions)
+      // Layer References
       let spcLayer = null;
+      let capLayer = null; // Reference for the CAP alert layer
       let animationInterval = null;
       let isPlaying = false;
-      let currentBaseLayer = null; // To hold the active base map layer
-      let isDarkMode = true; // State for the map theme
+      let currentBaseLayer = null;
+      let isDarkMode = true;
 
       let currentStepIndex = 0;
-      const animationSteps = [0.2, 0.4, 0.6, 0.8]; // Opacity steps for animation
+      const animationSteps = [0.2, 0.4, 0.6, 0.8];
 
       // DOM Elements
       const loadingOverlay = document.getElementById("loading-overlay");
@@ -378,13 +379,14 @@
       const spcStatus = document.getElementById("spc-layer-status");
       const baseMapStatus = document.getElementById("base-map-status");
       const toggleButton = document.getElementById("toggle-base-map");
+      const activeLayersList = document.getElementById("active-layers-list");
 
       // Tile Layer Definitions
       const baseMaps = {
         dark: L.tileLayer(
           "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
           {
-            attribution: "&copy; CARTO Dark | Sources: OSM, NEXRAD, IGO",
+            attribution: "&copy; CARTO Dark | Sources: OSM, NEXRAD, IGO, MSC",
             maxZoom: 19,
             subdomains: "abcd",
           }
@@ -392,26 +394,44 @@
         light: L.tileLayer(
           "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
           {
-            attribution: "&copy; OpenStreetMap | Sources: OSM, NEXRAD, IGO",
+            attribution:
+              "&copy; OpenStreetMap | Sources: OSM, NEXRAD, IGO, MSC",
             maxZoom: 19,
             subdomains: "abcd",
           }
         ),
       };
 
-      // Color mapping function
+      // Color mapping function for SPC
       const spcColors = (dn) => {
         switch (dn) {
           case 1:
-            return "#FFFF00"; // Marginal
+            return "#FFFF00";
           case 2:
-            return "#FFA500"; // Slight
+            return "#FFA500";
           case 3:
-            return "#FF4500"; // Enhanced / Moderate
+            return "#FF4500";
           case 4:
-            return "#FF0000"; // High
+            return "#FF0000";
           default:
             return "#CCCCCC";
+        }
+      };
+
+      // CAP Alert Color Mapping based on Severity
+      const capColors = (severity) => {
+        if (!severity) return "gray";
+        switch (severity.toLowerCase()) {
+          case "severe":
+            return "#FF00FF"; // Magenta
+          case "extreme":
+            return "#990099"; // Darker Purple
+          case "moderate":
+            return "#FF8C00"; // Dark Orange
+          case "minor":
+            return "#00BFFF"; // Deep Sky Blue
+          default:
+            return "#6495ED"; // Cornflower Blue
         }
       };
 
@@ -420,42 +440,35 @@
       // ----------------------------------------------------------------
 
       function setupMap() {
-        // Attribution Control
         L.control
           .attribution({
             position: "bottomright",
             prefix:
-              " &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO Québec (MSP). For educational and non-commercial use.",
+              " &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO Québec (MSP), MSC CAP Alert. For educational and non-commercial use.",
           })
           .addTo(map);
 
-        // Add the initial Dark Base Map Layer
         currentBaseLayer = baseMaps.dark;
         currentBaseLayer.addTo(map);
         baseMapStatus.textContent = "**CartoDB Dark Base Map**";
 
-        // Fix for Leaflet rendering in Flexbox container
         map.whenReady(function () {
           this.invalidateSize();
         });
       }
 
       function toggleBaseMap() {
-        // 1. Remove the current layer
         if (currentBaseLayer) {
           map.removeLayer(currentBaseLayer);
         }
 
-        // 2. Switch mode and set the new layer
         if (isDarkMode) {
-          // Switch to Light Mode
           currentBaseLayer = baseMaps.light;
           toggleButton.innerHTML = "🌙 Switch to Dark Map";
           baseMapStatus.textContent = "**OSM Standard Base Map**";
           toggleButton.classList.add("light-mode-active");
           isDarkMode = false;
         } else {
-          // Switch to Dark Mode
           currentBaseLayer = baseMaps.dark;
           toggleButton.innerHTML = "💡 Switch to Light Map";
           baseMapStatus.textContent = "**CartoDB Dark Base Map**";
@@ -463,16 +476,153 @@
           isDarkMode = true;
         }
 
-        // 3. Add the new layer to the map
         currentBaseLayer.addTo(map).bringToBack();
       }
 
       // ----------------------------------------------------------------
-      // Layer Loading Functions
+      // CAP Alert XML to GeoJSON Conversion Logic
+      // ----------------------------------------------------------------
+
+      /**
+       * Parses a CAP-XML string and converts the primary polygon area into a GeoJSON Feature.
+       */
+      function capXmlToGeoJSON(capXmlString) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(capXmlString, "application/xml");
+
+        if (xmlDoc.querySelector("parsererror")) {
+          console.error(
+            "Error parsing CAP XML:",
+            xmlDoc.querySelector("parsererror").textContent
+          );
+          return null;
+        }
+
+        const infoNode = xmlDoc.querySelector("info");
+        if (!infoNode) {
+          console.warn("CAP XML is missing the <info> block.");
+          return null;
+        }
+
+        // Extract core properties
+        const properties = {
+          headline:
+            infoNode.querySelector("headline")?.textContent ||
+            "Alert Headline Missing",
+          description:
+            infoNode.querySelector("description")?.textContent ||
+            "No description provided.",
+          severity:
+            infoNode.querySelector("severity")?.textContent || "Unknown",
+          event:
+            infoNode.querySelector("event")?.textContent || "General Alert",
+          expires: infoNode.querySelector("expires")?.textContent,
+        };
+
+        // Extract Geometry
+        const areaNode = infoNode.querySelector("area");
+        const polygonNode = areaNode?.querySelector("polygon");
+
+        if (!polygonNode) {
+          console.warn("CAP XML is missing the <polygon> geometry.");
+          return null;
+        }
+
+        const rawCoords = polygonNode.textContent.trim();
+        const pairs = rawCoords.split(/\s+/);
+
+        const coordinates = pairs.map((pair) => {
+          const [lat, lon] = pair.split(",").map(Number);
+          // CRITICAL: Convert from CAP's Lat,Lon to GeoJSON's Lon,Lat
+          return [lon, lat];
+        });
+
+        // Build GeoJSON Feature
+        return {
+          type: "Feature",
+          properties: properties,
+          geometry: {
+            type: "Polygon",
+            coordinates: [coordinates],
+          },
+        };
+      }
+
+      /**
+       * Loads the CAP alert data onto the Leaflet map.
+       */
+      function loadCapAlert(capXmlString) {
+        const capGeoJson = capXmlToGeoJSON(capXmlString);
+
+        if (!capGeoJson) {
+          // Add failed status to the list
+          const capStatusLi = document.createElement("li");
+          capStatusLi.innerHTML = `**MSC CAP Alert:** FAILED to load or parse.`;
+          activeLayersList.appendChild(capStatusLi);
+          return;
+        }
+
+        // Remove existing layer if it exists
+        if (capLayer) {
+          map.removeLayer(capLayer);
+        }
+
+        // Add the resulting GeoJSON to the map
+        capLayer = L.geoJSON(capGeoJson, {
+          style: function (feature) {
+            const color = capColors(feature.properties.severity);
+            return {
+              fillColor: color,
+              weight: 3,
+              opacity: 1,
+              color: "#FFFFFF", // White border
+              dashArray: "5, 5", // Dashed border for alerts
+              fillOpacity: 0.6,
+            };
+          },
+          onEachFeature: function (feature, layer) {
+            const properties = feature.properties;
+            const popupContent = `
+                        <h4 style="margin: 0; color: ${capColors(
+                          properties.severity
+                        )};">${properties.event}</h4>
+                        <strong>Headline:</strong> ${properties.headline}<br>
+                        <strong>Severity:</strong> ${properties.severity}<br>
+                        <strong>Expires:</strong> ${
+                          properties.expires
+                            ? new Date(properties.expires).toLocaleString()
+                            : "N/A"
+                        }<br>
+                        <hr style="border-color: #555;">
+                        <p style="margin: 5px 0 0 0;">${properties.description.substring(
+                          0,
+                          300
+                        )}...</p>
+                    `;
+            layer.bindPopup(popupContent);
+            layer.on("click", () => {
+              map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+            });
+          },
+        }).addTo(map);
+
+        // Update Layer Status
+        const capStatusLi = document.createElement("li");
+        capStatusLi.innerHTML = `**MSC CAP Alert:** ${capGeoJson.properties.headline} (**${capGeoJson.properties.severity}**)`;
+        activeLayersList.appendChild(capStatusLi);
+
+        // Zoom to the alert area
+        map.fitBounds(capLayer.getBounds(), { padding: [50, 50] });
+
+        console.log("CAP Alert successfully loaded and added to map.");
+      }
+
+      // ----------------------------------------------------------------
+      // Layer Loading Functions (IGO, NEXRAD, SPC)
       // ----------------------------------------------------------------
 
       function loadIgoLayers() {
-        // IGO Public Topographic Base Map (This one acts as an overlay/secondary map, not the main base)
+        // IGO Public Topographic Base Map
         const igoBaseLayer = L.tileLayer(
           "https://geoegl.msp.gouv.qc.ca/carto/tms/1.0.0/carte_gouv_qc_public@EPSG_3857/{z}/{x}/{y}.png",
           {
@@ -498,8 +648,8 @@
               pointToLayer: function (feature, latlng) {
                 return L.circleMarker(latlng, {
                   radius: 6,
-                  fillColor: "#800080", // Purple
-                  color: "#ffffff", // White stroke
+                  fillColor: "#800080",
+                  color: "#ffffff",
                   weight: 1.5,
                   opacity: 0.8,
                   fillOpacity: 0.8,
@@ -557,7 +707,7 @@
                   weight: 2,
                   opacity: 1,
                   color: "black",
-                  fillOpacity: 0.6, // Default opacity
+                  fillOpacity: 0.6,
                 };
               },
               onEachFeature: function (feature, layer) {
@@ -586,7 +736,6 @@
               "Error loading SPC data (animation disabled):",
               error
             );
-            // Update status text on failure
             spcStatus.textContent =
               "SPC NOAA Forecasts (GeoJSON) - FAILED to load";
           });
@@ -607,7 +756,6 @@
           isPlaying = false;
           playButton.innerHTML = "▶️ Start Animation";
           timeDisplay.textContent = "Time: Static";
-          // Reset opacity to default when stopped
           spcLayer.setStyle({ fillOpacity: 0.6 });
         } else {
           isPlaying = true;
@@ -620,7 +768,6 @@
               animationSteps.length
             }`;
 
-            // Update GeoJSON layer opacity
             spcLayer.setStyle({ fillOpacity: opacity });
 
             timeDisplay.textContent = `Time: ${timeLabel} (Opacity: ${opacity.toFixed(
@@ -639,11 +786,64 @@
         loadIgoLayers();
         loadWeatherLayers();
 
-        // Event listeners for the buttons
-        playButton.addEventListener("click", toggleAnimation);
-        toggleButton.addEventListener("click", toggleBaseMap); // New listener for base map toggle
+        // --- MSC CAP ALERT DATA LOADING ---
+        // Set the specific file name
+        const capAlertUrl = "T_WWCN11_C_CWVR_202511190220_1187808547.cap";
 
-        // Hide loading spinner after a short delay
+        // Placeholder CAP-XML string (used if fetch fails)
+        const sampleCapXml = `
+                <?xml version="1.0" encoding="UTF-8"?>
+                <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+                <identifier>MSC-Alert-SAMPLE-4321</identifier>
+                <sender>CWTO</sender>
+                <sent>2025-11-19T06:00:00-05:00</sent>
+                <status>Actual</status>
+                <msgType>Alert</msgType>
+                <scope>Public</scope>
+                <info>
+                    <language>en-CA</language>
+                    <category>Met</category>
+                    <event>Severe Thunderstorm Warning</event>
+                    <responseType>Shelter</responseType>
+                    <urgency>Immediate</urgency>
+                    <severity>Severe</severity>
+                    <certainty>Observed</certainty>
+                    <effective>2025-11-19T06:00:00-05:00</effective>
+                    <expires>2025-11-19T08:00:00-05:00</expires>
+                    <headline>SAMPLE: Severe Thunderstorm Warning for Southern Quebec</headline>
+                    <description>Conditions are favourable for the development of dangerous thunderstorms that may be capable of producing large hail, damaging winds, and heavy rain. Take shelter immediately (This is sample data).</description>
+                    <area>
+                    <areaDesc>Montreal - Laval - Longueuil Region (SAMPLE)</areaDesc>
+                    <polygon>45.5017,-73.5673 45.4583,-73.9400 45.6983,-73.7433 45.8167,-73.2733 45.5017,-73.5673</polygon>
+                    </area>
+                </info>
+                </alert>
+            `;
+
+        // Attempt to fetch the file
+        fetch(capAlertUrl)
+          .then((response) => {
+            if (!response.ok)
+              throw new Error(`HTTP error! status: ${response.status}`);
+            return response.text();
+          })
+          .then((xmlString) => {
+            loadCapAlert(xmlString);
+          })
+          .catch((error) => {
+            console.warn(
+              `Could not fetch CAP file from ${capAlertUrl}. Falling back to sample data. Error:`,
+              error
+            );
+            loadCapAlert(sampleCapXml);
+          });
+        // ----------------------------------------------------------------
+
+        // Event listeners
+        playButton.addEventListener("click", toggleAnimation);
+        toggleButton.addEventListener("click", toggleBaseMap);
+
+        // Hide loading spinner
         setTimeout(() => {
           loadingOverlay.style.opacity = "0";
           setTimeout(() => {
