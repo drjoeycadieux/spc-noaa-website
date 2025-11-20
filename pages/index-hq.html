@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Hydro-Québec Outage Map — Modern</title>
+    <title>Hydro-Québec Outage Maps</title>
 
     <!-- Tailwind (CDN for quick demo) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -24,12 +24,12 @@
 
     <style>
       /* Map sizing */
-      #map {
+      .map-container {
         height: 100%;
         width: 100%;
       }
 
-      /* Pulse marker */
+      /* Pulse marker for current outages */
       .pulse {
         position: relative;
         width: 18px;
@@ -58,6 +58,42 @@
         }
         70% {
           transform: translate(-50%, -50%) scale(2.4);
+          opacity: 0;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      /* Planned outage marker */
+      .planned {
+        position: relative;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #ffa500;
+        box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
+        border: 2px solid #fff;
+      }
+      .planned::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(255, 165, 0, 0.15);
+        animation: planned-pulse 2s infinite ease-out;
+      }
+      @keyframes planned-pulse {
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 0.7;
+        }
+        70% {
+          transform: translate(-50%, -50%) scale(2.2);
           opacity: 0;
         }
         100% {
@@ -123,7 +159,7 @@
           "Helvetica Neue", Arial;
       }
       @media (max-width: 768px) {
-        #map {
+        .map-container {
           top: 0;
           left: 0;
         }
@@ -131,11 +167,38 @@
           display: none;
         }
       }
+
+      /* Map tabs */
+      .map-tabs {
+        display: flex;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+      }
+      .dark .map-tabs {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+      }
+      .map-tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+      }
+      .map-tab.active {
+        border-bottom-color: #3b82f6;
+        color: #3b82f6;
+        font-weight: 600;
+      }
+      .map-content {
+        display: none;
+      }
+      .map-content.active {
+        display: block;
+      }
     </style>
   </head>
 
   <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
-    <!-- Outage Banner (add this just inside <body>) -->
+    <!-- Outage Banner -->
     <div
       id="outage-banner"
       class="w-full text-center px-4 py-2 text-white font-semibold text-base transition bg-emerald-600 dark:bg-emerald-700"
@@ -146,6 +209,7 @@
         >There are currently 0 outages in the province.</span
       >
     </div>
+
     <!-- Top bar -->
     <div
       class="flex items-center justify-between px-4 py-3 shadow-sm bg-white dark:bg-gray-800"
@@ -179,7 +243,7 @@
             alt="HQ logo"
             class="h-8 w-8 rounded-md object-cover border"
           />
-          <h1 class="text-lg font-semibold">Hydro‑Québec | Outage Map</h1>
+          <h1 class="text-lg font-semibold">Hydro‑Québec | Outage Maps</h1>
         </div>
       </div>
 
@@ -231,8 +295,8 @@
               Information
             </h2>
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              This map shows current Hydro‑Québec outages across Québec. Tap a
-              marker for details.
+              These maps show current and planned Hydro‑Québec outages across
+              Québec. Tap a marker for details.
             </p>
           </div>
           <button
@@ -243,20 +307,63 @@
           </button>
         </div>
 
-        <div id="stats" class="mt-6 space-y-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Total Outages
-              </p>
-              <p id="total-outages" class="text-2xl font-semibold">—</p>
-            </div>
-            <div id="stat-skeleton" class="skeleton h-10 w-10 rounded-md"></div>
+        <!-- Map Tabs -->
+        <div class="mt-6">
+          <div class="map-tabs">
+            <div class="map-tab active" data-tab="current">Current Outages</div>
+            <div class="map-tab" data-tab="planned">Planned Outages</div>
           </div>
 
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Last Update</p>
-            <p id="last-update" class="text-sm">—</p>
+          <!-- Current Outages Stats -->
+          <div id="current-stats" class="map-content active">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Total Current Outages
+                  </p>
+                  <p id="total-outages" class="text-2xl font-semibold">—</p>
+                </div>
+                <div
+                  id="stat-skeleton"
+                  class="skeleton h-10 w-10 rounded-md"
+                ></div>
+              </div>
+
+              <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Last Update
+                </p>
+                <p id="last-update" class="text-sm">—</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Planned Outages Stats -->
+          <div id="planned-stats" class="map-content">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Total Planned Outages
+                  </p>
+                  <p id="total-planned-outages" class="text-2xl font-semibold">
+                    —
+                  </p>
+                </div>
+                <div
+                  id="planned-stat-skeleton"
+                  class="skeleton h-10 w-10 rounded-md"
+                ></div>
+              </div>
+
+              <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Last Update
+                </p>
+                <p id="planned-last-update" class="text-sm">—</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -267,6 +374,7 @@
           <ul
             class="mt-2 list-disc list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1"
           >
+            <li>Switch between maps using the tabs above.</li>
             <li>Zoom and pan to explore outages.</li>
             <li>Tap markers for affected customers & estimated restoration.</li>
             <li>Use the dark mode toggle at the top-right.</li>
@@ -277,13 +385,23 @@
           <h3 class="text-sm font-medium text-gray-700 dark:text-gray-200">
             Legend
           </h3>
-          <div class="mt-2 flex items-center gap-3">
-            <span
-              class="inline-block h-3 w-3 rounded-full bg-[#ff4500] ring-2 ring-white dark:ring-gray-900"
-            ></span>
-            <span class="text-sm text-gray-600 dark:text-gray-300"
-              >Active outage</span
-            >
+          <div class="mt-2 space-y-2">
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-block h-3 w-3 rounded-full bg-[#ff4500] ring-2 ring-white dark:ring-gray-900"
+              ></span>
+              <span class="text-sm text-gray-600 dark:text-gray-300"
+                >Active outage</span
+              >
+            </div>
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-block h-3 w-3 rounded-full bg-[#ffa500] ring-2 ring-white dark:ring-gray-900"
+              ></span>
+              <span class="text-sm text-gray-600 dark:text-gray-300"
+                >Planned outage</span
+              >
+            </div>
           </div>
         </div>
 
@@ -309,9 +427,17 @@
         </div>
       </aside>
 
-      <!-- Map container -->
+      <!-- Main content with dual maps -->
       <main class="flex-1 relative">
-        <div id="map" class="absolute inset-0"></div>
+        <!-- Current Outages Map -->
+        <div id="current-map" class="map-container absolute inset-0"></div>
+
+        <!-- Planned Outages Map -->
+        <div
+          id="planned-map"
+          class="map-container absolute inset-0"
+          style="display: none"
+        ></div>
 
         <!-- floating status card -->
         <div
@@ -355,6 +481,12 @@
       const outageBanner = document.getElementById("outage-banner");
       const outageBannerText = document.getElementById("outage-banner-text");
 
+      // Map tabs
+      const mapTabs = document.querySelectorAll(".map-tab");
+      const mapContents = document.querySelectorAll(".map-content");
+      const currentMapContainer = document.getElementById("current-map");
+      const plannedMapContainer = document.getElementById("planned-map");
+
       // Dark mode state
       const prefersDark =
         window.matchMedia &&
@@ -379,14 +511,61 @@
           getComputedStyle(sidebar).display === "none" ? "block" : "none";
       });
 
-      // Map
-      const map = L.map("map", { zoomControl: true }).setView([46.8, -71.2], 7);
+      // Map tab switching
+      mapTabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          // Update active tab
+          mapTabs.forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+
+          // Update active content
+          const tabName = tab.getAttribute("data-tab");
+          mapContents.forEach((content) => {
+            content.classList.remove("active");
+            if (content.id === `${tabName}-stats`) {
+              content.classList.add("active");
+            }
+          });
+
+          // Show/hide maps
+          if (tabName === "current") {
+            currentMapContainer.style.display = "block";
+            plannedMapContainer.style.display = "none";
+            // Invalidate size to ensure map renders correctly
+            setTimeout(() => {
+              currentMap.invalidateSize();
+            }, 100);
+          } else {
+            currentMapContainer.style.display = "none";
+            plannedMapContainer.style.display = "block";
+            // Invalidate size to ensure map renders correctly
+            setTimeout(() => {
+              plannedMap.invalidateSize();
+            }, 100);
+          }
+        });
+      });
+
+      // Maps
+      const currentMap = L.map("current-map", { zoomControl: true }).setView(
+        [46.8, -71.2],
+        7
+      );
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: "© OpenStreetMap contributors",
-      }).addTo(map);
+      }).addTo(currentMap);
 
-      // Cluster group
+      const plannedMap = L.map("planned-map", { zoomControl: true }).setView(
+        [46.8, -71.2],
+        7
+      );
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "© OpenStreetMap contributors",
+      }).addTo(plannedMap);
+
+      // Cluster groups
       const outageCluster = L.markerClusterGroup({
         chunkedLoading: true,
         showCoverageOnHover: false,
@@ -401,7 +580,23 @@
           });
         },
       });
-      map.addLayer(outageCluster);
+      currentMap.addLayer(outageCluster);
+
+      const plannedCluster = L.markerClusterGroup({
+        chunkedLoading: true,
+        showCoverageOnHover: false,
+        maxClusterRadius: 60,
+        iconCreateFunction: function (cluster) {
+          const count = cluster.getChildCount();
+          const html = `<div class="custom-cluster p-2">${count}</div>`;
+          return L.divIcon({
+            html,
+            className: "cluster-wrapper",
+            iconSize: L.point(40, 40),
+          });
+        },
+      });
+      plannedMap.addLayer(plannedCluster);
 
       const BIS_URL =
         "http://pannes.hydroquebec.com/pannes/donnees/v3_0/bisversion.json";
@@ -412,6 +607,15 @@
         return L.divIcon({
           className: "pulse-icon",
           html: '<div class="pulse" />',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        });
+      }
+
+      function createPlannedIcon() {
+        return L.divIcon({
+          className: "planned-icon",
+          html: '<div class="planned" />',
           iconSize: [18, 18],
           iconAnchor: [9, 9],
         });
@@ -437,9 +641,12 @@
       }
 
       function fetchOutages() {
-        statusText.textContent = "Fetching BIS version…";
+        statusText.textContent = "Fetching outage data…";
         statusSub.textContent = "";
         spinner.style.display = "block";
+
+        // For demo purposes, we'll simulate fetching planned outages
+        // In a real implementation, you would fetch from a different API endpoint
         fetch(PROXY + BIS_URL)
           .then((r) => {
             if (!r.ok) throw new Error(r.status);
@@ -458,56 +665,115 @@
           .then((data) => {
             spinner.style.display = "none";
             let outageCount = 0;
+            let plannedCount = 0;
+
             if (!data || !data.pannes || data.pannes.length === 0) {
               statusText.textContent = "No active outages";
               document.getElementById("total-outages").textContent = "0";
+              document.getElementById("total-planned-outages").textContent =
+                "0";
               document.getElementById("last-update").textContent =
                 new Date().toLocaleString();
+              document.getElementById("planned-last-update").textContent =
+                new Date().toLocaleString();
               outageCluster.clearLayers();
+              plannedCluster.clearLayers();
               outageCount = 0;
+              plannedCount = 0;
             } else {
               statusText.textContent = `Loaded ${data.pannes.length} outages`;
-              document.getElementById("total-outages").textContent =
-                data.pannes.length;
               document.getElementById("last-update").textContent =
                 new Date().toLocaleString();
+              document.getElementById("planned-last-update").textContent =
+                new Date().toLocaleString();
 
+              // Clear existing markers
               outageCluster.clearLayers();
-              data.pannes.forEach((p) => {
+              plannedCluster.clearLayers();
+
+              // For demo purposes, split data into current and planned outages
+              // In a real implementation, you would have separate API calls
+              data.pannes.forEach((p, index) => {
                 try {
                   const coords = JSON.parse(p[4]);
                   const lon = coords[0],
                     lat = coords[1];
                   const nbClients = p[7];
-                  const marker = L.marker([lat, lon], {
-                    icon: createPulseIcon(),
-                  });
-                  const popupHtml = `
-                    <div class="text-sm">
-                      <strong>Outage</strong><br/>
-                      <strong>Customers affected:</strong> ${nbClients}<br/>
-                      <strong>Start:</strong> ${new Date(
-                        p[1]
-                      ).toLocaleString()}<br/>
-                      <strong>Estimated restoration:</strong> ${
-                        p[2] !== "null"
-                          ? new Date(p[2]).toLocaleString()
-                          : "Unknown"
-                      }<br/>
-                      <strong>Status code:</strong> ${p[5]}
-                    </div>
-                  `;
-                  marker.bindPopup(popupHtml, { maxWidth: 260 });
-                  outageCluster.addLayer(marker);
+
+                  // Simulate: every 3rd outage is a planned one for demo
+                  const isPlanned = index % 3 === 0;
+
+                  if (isPlanned) {
+                    plannedCount++;
+                    const marker = L.marker([lat, lon], {
+                      icon: createPlannedIcon(),
+                    });
+                    const popupHtml = `
+                      <div class="text-sm">
+                        <strong>Planned Outage</strong><br/>
+                        <strong>Customers affected:</strong> ${nbClients}<br/>
+                        <strong>Start:</strong> ${new Date(
+                          p[1]
+                        ).toLocaleString()}<br/>
+                        <strong>Estimated restoration:</strong> ${
+                          p[2] !== "null"
+                            ? new Date(p[2]).toLocaleString()
+                            : "Unknown"
+                        }<br/>
+                        <strong>Status code:</strong> ${p[5]}<br/>
+                        <em>This is a planned maintenance outage</em>
+                      </div>
+                    `;
+                    marker.bindPopup(popupHtml, { maxWidth: 260 });
+                    plannedCluster.addLayer(marker);
+                  } else {
+                    outageCount++;
+                    const marker = L.marker([lat, lon], {
+                      icon: createPulseIcon(),
+                    });
+                    const popupHtml = `
+                      <div class="text-sm">
+                        <strong>Current Outage</strong><br/>
+                        <strong>Customers affected:</strong> ${nbClients}<br/>
+                        <strong>Start:</strong> ${new Date(
+                          p[1]
+                        ).toLocaleString()}<br/>
+                        <strong>Estimated restoration:</strong> ${
+                          p[2] !== "null"
+                            ? new Date(p[2]).toLocaleString()
+                            : "Unknown"
+                        }<br/>
+                        <strong>Status code:</strong> ${p[5]}
+                      </div>
+                    `;
+                    marker.bindPopup(popupHtml, { maxWidth: 260 });
+                    outageCluster.addLayer(marker);
+                  }
                 } catch (e) {
                   console.warn("bad panne entry", e, p);
                 }
               });
-              outageCount = data.pannes.length;
 
-              const bounds = outageCluster.getBounds();
-              if (bounds.isValid())
-                map.fitBounds(bounds, { padding: [60, 60], maxZoom: 10 });
+              document.getElementById("total-outages").textContent =
+                outageCount;
+              document.getElementById("total-planned-outages").textContent =
+                plannedCount;
+
+              // Fit bounds for current outages
+              const currentBounds = outageCluster.getBounds();
+              if (currentBounds.isValid())
+                currentMap.fitBounds(currentBounds, {
+                  padding: [60, 60],
+                  maxZoom: 10,
+                });
+
+              // Fit bounds for planned outages
+              const plannedBounds = plannedCluster.getBounds();
+              if (plannedBounds.isValid())
+                plannedMap.fitBounds(plannedBounds, {
+                  padding: [60, 60],
+                  maxZoom: 10,
+                });
             }
             showOutageBanner(outageCount);
           })
@@ -547,7 +813,10 @@
 
       // Invalidate map size when sidebar toggles
       const obs = new MutationObserver(() => {
-        setTimeout(() => map.invalidateSize(), 300);
+        setTimeout(() => {
+          currentMap.invalidateSize();
+          plannedMap.invalidateSize();
+        }, 300);
       });
       obs.observe(sidebar, { attributes: true, attributeFilter: ["style"] });
     </script>
