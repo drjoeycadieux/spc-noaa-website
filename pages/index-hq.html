@@ -135,6 +135,17 @@
   </head>
 
   <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+    <!-- Outage Banner (add this just inside <body>) -->
+    <div
+      id="outage-banner"
+      class="w-full text-center px-4 py-2 text-white font-semibold text-base transition bg-emerald-600 dark:bg-emerald-700"
+      style="display: none"
+    >
+      <!-- Populated by JS -->
+      <span id="outage-banner-text"
+        >There are currently 0 outages in the province.</span
+      >
+    </div>
     <!-- Top bar -->
     <div
       class="flex items-center justify-between px-4 py-3 shadow-sm bg-white dark:bg-gray-800"
@@ -340,6 +351,10 @@
       const spinner = document.getElementById("spinner");
       const refreshBtn = document.getElementById("refresh");
 
+      // Banner
+      const outageBanner = document.getElementById("outage-banner");
+      const outageBannerText = document.getElementById("outage-banner-text");
+
       // Dark mode state
       const prefersDark =
         window.matchMedia &&
@@ -402,6 +417,25 @@
         });
       }
 
+      function showOutageBanner(count) {
+        if (count === 0) {
+          outageBannerText.textContent =
+            "There are currently no outages in the province.";
+          outageBanner.classList.remove("bg-red-600", "dark:bg-red-700");
+          outageBanner.classList.add("bg-emerald-600", "dark:bg-emerald-700");
+        } else {
+          outageBannerText.textContent = `There are currently ${count} outage${
+            count > 1 ? "s" : ""
+          } in the province.`;
+          outageBanner.classList.remove(
+            "bg-emerald-600",
+            "dark:bg-emerald-700"
+          );
+          outageBanner.classList.add("bg-red-600", "dark:bg-red-700");
+        }
+        outageBanner.style.display = "block";
+      }
+
       function fetchOutages() {
         statusText.textContent = "Fetching BIS version…";
         statusSub.textContent = "";
@@ -423,62 +457,76 @@
           })
           .then((data) => {
             spinner.style.display = "none";
+            let outageCount = 0;
             if (!data || !data.pannes || data.pannes.length === 0) {
               statusText.textContent = "No active outages";
               document.getElementById("total-outages").textContent = "0";
               document.getElementById("last-update").textContent =
                 new Date().toLocaleString();
               outageCluster.clearLayers();
-              return;
+              outageCount = 0;
+            } else {
+              statusText.textContent = `Loaded ${data.pannes.length} outages`;
+              document.getElementById("total-outages").textContent =
+                data.pannes.length;
+              document.getElementById("last-update").textContent =
+                new Date().toLocaleString();
+
+              outageCluster.clearLayers();
+              data.pannes.forEach((p) => {
+                try {
+                  const coords = JSON.parse(p[4]);
+                  const lon = coords[0],
+                    lat = coords[1];
+                  const nbClients = p[7];
+                  const marker = L.marker([lat, lon], {
+                    icon: createPulseIcon(),
+                  });
+                  const popupHtml = `
+                    <div class="text-sm">
+                      <strong>Outage</strong><br/>
+                      <strong>Customers affected:</strong> ${nbClients}<br/>
+                      <strong>Start:</strong> ${new Date(
+                        p[1]
+                      ).toLocaleString()}<br/>
+                      <strong>Estimated restoration:</strong> ${
+                        p[2] !== "null"
+                          ? new Date(p[2]).toLocaleString()
+                          : "Unknown"
+                      }<br/>
+                      <strong>Status code:</strong> ${p[5]}
+                    </div>
+                  `;
+                  marker.bindPopup(popupHtml, { maxWidth: 260 });
+                  outageCluster.addLayer(marker);
+                } catch (e) {
+                  console.warn("bad panne entry", e, p);
+                }
+              });
+              outageCount = data.pannes.length;
+
+              const bounds = outageCluster.getBounds();
+              if (bounds.isValid())
+                map.fitBounds(bounds, { padding: [60, 60], maxZoom: 10 });
             }
-
-            statusText.textContent = `Loaded ${data.pannes.length} outages`;
-            document.getElementById("total-outages").textContent =
-              data.pannes.length;
-            document.getElementById("last-update").textContent =
-              new Date().toLocaleString();
-
-            outageCluster.clearLayers();
-            data.pannes.forEach((p) => {
-              try {
-                const coords = JSON.parse(p[4]);
-                const lon = coords[0],
-                  lat = coords[1];
-                const nbClients = p[7];
-                const marker = L.marker([lat, lon], {
-                  icon: createPulseIcon(),
-                });
-                const popupHtml = `
-                  <div class="text-sm">
-                    <strong>Outage</strong><br/>
-                    <strong>Customers affected:</strong> ${nbClients}<br/>
-                    <strong>Start:</strong> ${new Date(
-                      p[1]
-                    ).toLocaleString()}<br/>
-                    <strong>Estimated restoration:</strong> ${
-                      p[2] !== "null"
-                        ? new Date(p[2]).toLocaleString()
-                        : "Unknown"
-                    }<br/>
-                    <strong>Status code:</strong> ${p[5]}
-                  </div>
-                `;
-                marker.bindPopup(popupHtml, { maxWidth: 260 });
-                outageCluster.addLayer(marker);
-              } catch (e) {
-                console.warn("bad panne entry", e, p);
-              }
-            });
-
-            const bounds = outageCluster.getBounds();
-            if (bounds.isValid())
-              map.fitBounds(bounds, { padding: [60, 60], maxZoom: 10 });
+            showOutageBanner(outageCount);
           })
           .catch((err) => {
             console.error(err);
             spinner.style.display = "none";
             statusText.textContent = "Error loading outages";
             statusSub.textContent = err.message || "";
+            // On error, hide the banner
+            outageBannerText.textContent =
+              "Unable to load outage info at this time.";
+            outageBanner.classList.remove(
+              "bg-emerald-600",
+              "dark:bg-emerald-700",
+              "bg-red-600",
+              "dark:bg-red-700"
+            );
+            outageBanner.classList.add("bg-gray-700", "dark:bg-gray-900");
+            outageBanner.style.display = "block";
           });
       }
 
