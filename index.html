@@ -555,8 +555,10 @@
     </div>
 
     <footer>
-      <strong>Map and Data Sources</strong> | &copy; 2025 | Sources: SPC NOAA,
-      NEXRAD, IGO Québec (MSP), MSC CAP. For educational and non-commercial use.
+      <p>
+        © 2025 Developed By Joey Cadieux. Data sources: SPC NOAA, NEXRAD, IGO
+        Québec (MSP), MSC CAP. Used under license.
+      </p>
     </footer>
 
     <script>
@@ -603,8 +605,7 @@
         light: L.tileLayer(
           "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
           {
-            attribution:
-              "&copy; OpenStreetMap | Sources: OSM, NEXRAD, IGO, MSC",
+            attribution: "Developed By Joey Cadieux",
             maxZoom: 19,
             subdomains: "abcd",
           }
@@ -654,8 +655,7 @@
         L.control
           .attribution({
             position: "bottomright",
-            prefix:
-              " &copy; 2025 | Sources: SPC NOAA, NEXRAD, IGO Québec (MSP), MSC CAP Alert. For educational and non-commercial use.",
+            prefix: " &copy; 2025 Weather Data",
           })
           .addTo(map);
 
@@ -812,7 +812,7 @@
         const igoBaseLayer = L.tileLayer(
           "https://geoegl.msp.gouv.qc.ca/carto/tms/1.0.0/carte_gouv_qc_public@EPSG_3857/{z}/{x}/{y}.png",
           {
-            attribution: "IGO Base Map: Government of Quebec",
+            // attribution: "IGO Base Map: Government of Quebec",
             tms: true,
             opacity: 0.8,
             maxZoom: 18,
