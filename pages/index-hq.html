@@ -552,6 +552,17 @@
       </main>
     </div>
 
+    <footer
+      class="w-full bg-white dark:bg-gray-800 py-4 text-center border-t border-gray-200 dark:border-gray-700"
+    >
+      <div
+        class="container mx-auto px-4 text-sm text-gray-600 dark:text-gray-300"
+      >
+        &copy; 2025 Hydro-Québec Outage Maps. Not affiliated with Hydro-Québec.
+        Data source: Hydro-Québec public outage feed.
+      </div>
+    </footer>
+
     <!-- Leaflet & markercluster JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
@@ -614,7 +625,8 @@
       );
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
-        attribution: "© OpenStreetMap contributors",
+        attribution:
+          "Developed By Joey Cadieux. Not affiliated with Hydro-Québec",
       }).addTo(currentMap);
 
       const plannedMap = L.map("planned-map", { zoomControl: true }).setView(
