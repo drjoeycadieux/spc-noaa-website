@@ -194,6 +194,78 @@
       .map-content.active {
         display: block;
       }
+
+      /* Search box styles */
+      .search-container {
+        position: absolute;
+        top: 80px;
+        left: 20px;
+        z-index: 1000;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 8px;
+        width: 300px;
+      }
+      .dark .search-container {
+        background: #374151;
+        color: white;
+      }
+      .search-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .dark .search-input {
+        background: #4b5563;
+        border-color: #6b7280;
+        color: white;
+      }
+      .search-input:focus {
+        border-color: #3b82f6;
+      }
+      .search-results {
+        max-height: 200px;
+        overflow-y: auto;
+        margin-top: 8px;
+        border-radius: 6px;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .dark .search-results {
+        background: #4b5563;
+      }
+      .search-result-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 14px;
+      }
+      .dark .search-result-item {
+        border-bottom-color: #6b7280;
+      }
+      .search-result-item:hover {
+        background: #f3f4f6;
+      }
+      .dark .search-result-item:hover {
+        background: #6b7280;
+      }
+      .search-result-item:last-child {
+        border-bottom: none;
+      }
+      .search-no-results {
+        padding: 8px 12px;
+        font-size: 14px;
+        color: #6b7280;
+        text-align: center;
+      }
+      .dark .search-no-results {
+        color: #9ca3af;
+      }
     </style>
   </head>
 
@@ -378,6 +450,9 @@
             <li>Zoom and pan to explore outages.</li>
             <li>Tap markers for affected customers & estimated restoration.</li>
             <li>Use the dark mode toggle at the top-right.</li>
+            <li>
+              Search for outages by postal code using the search box on the map.
+            </li>
           </ul>
         </div>
 
@@ -429,6 +504,22 @@
 
       <!-- Main content with dual maps -->
       <main class="flex-1 relative">
+        <!-- Search Box -->
+        <div class="search-container">
+          <input
+            type="text"
+            id="postal-code-search"
+            class="search-input"
+            placeholder="Search by postal code (e.g., H3A, G1V)"
+            autocomplete="off"
+          />
+          <div
+            id="search-results"
+            class="search-results"
+            style="display: none"
+          ></div>
+        </div>
+
         <!-- Current Outages Map -->
         <div id="current-map" class="map-container absolute inset-0"></div>
 
@@ -487,6 +578,10 @@
       const currentMapContainer = document.getElementById("current-map");
       const plannedMapContainer = document.getElementById("planned-map");
 
+      // Search elements
+      const postalCodeSearch = document.getElementById("postal-code-search");
+      const searchResults = document.getElementById("search-results");
+
       // Dark mode state
       const prefersDark =
         window.matchMedia &&
@@ -509,41 +604,6 @@
       toggleSidebarBtn.addEventListener("click", () => {
         sidebar.style.display =
           getComputedStyle(sidebar).display === "none" ? "block" : "none";
-      });
-
-      // Map tab switching
-      mapTabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-          // Update active tab
-          mapTabs.forEach((t) => t.classList.remove("active"));
-          tab.classList.add("active");
-
-          // Update active content
-          const tabName = tab.getAttribute("data-tab");
-          mapContents.forEach((content) => {
-            content.classList.remove("active");
-            if (content.id === `${tabName}-stats`) {
-              content.classList.add("active");
-            }
-          });
-
-          // Show/hide maps
-          if (tabName === "current") {
-            currentMapContainer.style.display = "block";
-            plannedMapContainer.style.display = "none";
-            // Invalidate size to ensure map renders correctly
-            setTimeout(() => {
-              currentMap.invalidateSize();
-            }, 100);
-          } else {
-            currentMapContainer.style.display = "none";
-            plannedMapContainer.style.display = "block";
-            // Invalidate size to ensure map renders correctly
-            setTimeout(() => {
-              plannedMap.invalidateSize();
-            }, 100);
-          }
-        });
       });
 
       // Maps
@@ -603,6 +663,10 @@
       const PROXY = "https://corsproxy.io/?";
       const REFRESH_INTERVAL = 300000;
 
+      // Store all outages for search functionality
+      let allOutages = [];
+      let allPlannedOutages = [];
+
       function createPulseIcon() {
         return L.divIcon({
           className: "pulse-icon",
@@ -639,6 +703,170 @@
         }
         outageBanner.style.display = "block";
       }
+
+      // Postal code to coordinates mapping (simplified for demo)
+      // In a real implementation, you would use a geocoding service
+      const postalCodeCoordinates = {
+        H3A: [45.5048, -73.5772], // Montreal
+        H2X: [45.5107, -73.565], // Montreal
+        G1V: [46.7913, -71.2879], // Quebec City
+        J7V: [45.5333, -73.8667], // Laval
+        J1H: [45.4, -71.9], // Sherbrooke
+        G7H: [48.4333, -71.0667], // Saguenay
+        G6V: [46.3667, -72.55], // Trois-Rivières
+        J6A: [45.65, -73.6333], // Repentigny
+        J5R: [45.65, -73.45], // Terrebonne
+        J4Z: [45.5333, -73.5167], // Longueuil
+        J8Y: [45.4667, -75.7], // Gatineau
+        J7T: [45.65, -74.3333], // Saint-Jérôme
+        J6E: [45.3, -73.25], // Saint-Jean-sur-Richelieu
+        J2S: [45.4167, -72.0167], // Drummondville
+        J6J: [46.0333, -73.1167], // Joliette
+        G5L: [48.45, -68.5333], // Rimouski
+        G9A: [46.35, -72.5667], // Shawinigan
+        G6W: [46.75, -71.3667], // Lévis
+        J7W: [45.4833, -73.7667], // Brossard
+        J3V: [45.5333, -73.2833], // Saint-Hyacinthe
+      };
+
+      // Search functionality
+      function performSearch(query) {
+        if (!query || query.length < 2) {
+          searchResults.style.display = "none";
+          return;
+        }
+
+        const normalizedQuery = query.toUpperCase().trim();
+        const matches = Object.keys(postalCodeCoordinates).filter((code) =>
+          code.includes(normalizedQuery)
+        );
+
+        if (matches.length > 0) {
+          searchResults.innerHTML = "";
+          matches.forEach((code) => {
+            const item = document.createElement("div");
+            item.className = "search-result-item";
+            item.textContent = code;
+            item.addEventListener("click", () => {
+              postalCodeSearch.value = code;
+              searchResults.style.display = "none";
+              zoomToPostalCode(code);
+            });
+            searchResults.appendChild(item);
+          });
+          searchResults.style.display = "block";
+        } else {
+          searchResults.innerHTML =
+            '<div class="search-no-results">No matching postal codes found</div>';
+          searchResults.style.display = "block";
+        }
+      }
+
+      function zoomToPostalCode(postalCode) {
+        const coords = postalCodeCoordinates[postalCode];
+        if (coords) {
+          // Determine which map is currently active
+          const activeTab = document
+            .querySelector(".map-tab.active")
+            .getAttribute("data-tab");
+          const map = activeTab === "current" ? currentMap : plannedMap;
+
+          // Zoom to the postal code area
+          map.setView(coords, 12);
+
+          // Highlight outages in this area
+          highlightOutagesInArea(coords, activeTab);
+        }
+      }
+
+      function highlightOutagesInArea(centerCoords, type) {
+        // In a real implementation, you would check which outages are within
+        // a certain radius of the center coordinates
+        // For this demo, we'll just show all outages and focus on the area
+
+        // Clear any existing highlights
+        clearHighlights();
+
+        // Add a circle to show the search area
+        const circle = L.circle(centerCoords, {
+          color: "#3b82f6",
+          fillColor: "#3b82f6",
+          fillOpacity: 0.1,
+          radius: 5000, // 5km radius
+        });
+
+        if (type === "current") {
+          circle.addTo(currentMap);
+          window.currentHighlight = circle;
+        } else {
+          circle.addTo(plannedMap);
+          window.plannedHighlight = circle;
+        }
+      }
+
+      function clearHighlights() {
+        if (window.currentHighlight) {
+          currentMap.removeLayer(window.currentHighlight);
+        }
+        if (window.plannedHighlight) {
+          plannedMap.removeLayer(window.plannedHighlight);
+        }
+      }
+
+      // Event listeners for search
+      postalCodeSearch.addEventListener("input", (e) => {
+        performSearch(e.target.value);
+      });
+
+      postalCodeSearch.addEventListener("focus", () => {
+        if (postalCodeSearch.value.length >= 2) {
+          performSearch(postalCodeSearch.value);
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        if (
+          !postalCodeSearch.contains(e.target) &&
+          !searchResults.contains(e.target)
+        ) {
+          searchResults.style.display = "none";
+        }
+      });
+
+      // Map tab switching
+      mapTabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          // Update active tab
+          mapTabs.forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+
+          // Update active content
+          const tabName = tab.getAttribute("data-tab");
+          mapContents.forEach((content) => {
+            content.classList.remove("active");
+            if (content.id === `${tabName}-stats`) {
+              content.classList.add("active");
+            }
+          });
+
+          // Show/hide maps
+          if (tabName === "current") {
+            currentMapContainer.style.display = "block";
+            plannedMapContainer.style.display = "none";
+            // Invalidate size to ensure map renders correctly
+            setTimeout(() => {
+              currentMap.invalidateSize();
+            }, 100);
+          } else {
+            currentMapContainer.style.display = "none";
+            plannedMapContainer.style.display = "block";
+            // Invalidate size to ensure map renders correctly
+            setTimeout(() => {
+              plannedMap.invalidateSize();
+            }, 100);
+          }
+        });
+      });
 
       function fetchOutages() {
         statusText.textContent = "Fetching outage data…";
@@ -691,6 +919,10 @@
               outageCluster.clearLayers();
               plannedCluster.clearLayers();
 
+              // Store outages for search
+              allOutages = [];
+              allPlannedOutages = [];
+
               // For demo purposes, split data into current and planned outages
               // In a real implementation, you would have separate API calls
               data.pannes.forEach((p, index) => {
@@ -726,6 +958,13 @@
                     `;
                     marker.bindPopup(popupHtml, { maxWidth: 260 });
                     plannedCluster.addLayer(marker);
+
+                    // Store for search
+                    allPlannedOutages.push({
+                      coords: [lat, lon],
+                      marker: marker,
+                      data: p,
+                    });
                   } else {
                     outageCount++;
                     const marker = L.marker([lat, lon], {
@@ -748,6 +987,13 @@
                     `;
                     marker.bindPopup(popupHtml, { maxWidth: 260 });
                     outageCluster.addLayer(marker);
+
+                    // Store for search
+                    allOutages.push({
+                      coords: [lat, lon],
+                      marker: marker,
+                      data: p,
+                    });
                   }
                 } catch (e) {
                   console.warn("bad panne entry", e, p);
