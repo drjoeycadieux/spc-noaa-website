@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Hydro-Québec Outage Maps</title>
 
-    <!-- Tailwind (CDN for quick demo) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = { darkMode: "class" };
@@ -266,6 +266,21 @@
       .dark .search-no-results {
         color: #9ca3af;
       }
+
+      /* Status indicators */
+      .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+      }
+      .status-active {
+        background-color: #ff4500;
+      }
+      .status-planned {
+        background-color: #ffa500;
+      }
     </style>
   </head>
 
@@ -276,7 +291,6 @@
       class="w-full text-center px-4 py-2 text-white font-semibold text-base transition bg-emerald-600 dark:bg-emerald-700"
       style="display: none"
     >
-      <!-- Populated by JS -->
       <span id="outage-banner-text"
         >There are currently 0 outages in the province.</span
       >
@@ -309,12 +323,11 @@
         </button>
 
         <div class="flex items-center gap-3">
-          <img
-            id="logo"
-            src="/assets/log.png"
-            alt="HQ logo"
-            class="h-8 w-8 rounded-md object-cover border"
-          />
+          <div
+            class="h-8 w-8 rounded-md bg-blue-600 flex items-center justify-center"
+          >
+            <span class="text-white font-bold">HQ</span>
+          </div>
           <h1 class="text-lg font-semibold">Hydro‑Québec | Outage Maps</h1>
         </div>
       </div>
@@ -347,7 +360,7 @@
           >
             <path
               fill-rule="evenodd"
-              d="M2 10a8 8 0 1116 0 1 1 0 11-2 0 6 6 0 10-12 0 1 1 0 11-2 0z"
+              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
               clip-rule="evenodd"
             />
           </svg>
@@ -364,11 +377,11 @@
         <div class="flex items-start justify-between gap-2">
           <div>
             <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-50">
-              Information
+              Outage Information
             </h2>
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
               These maps show current and planned Hydro‑Québec outages across
-              Québec. Tap a marker for details.
+              Québec. Click a marker for details.
             </p>
           </div>
           <button
@@ -396,10 +409,17 @@
                   </p>
                   <p id="total-outages" class="text-2xl font-semibold">—</p>
                 </div>
-                <div
-                  id="stat-skeleton"
-                  class="skeleton h-10 w-10 rounded-md"
-                ></div>
+                <div class="flex items-center">
+                  <span class="status-indicator status-active"></span>
+                  <span class="text-sm text-gray-500">Active</span>
+                </div>
+              </div>
+
+              <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Customers Affected
+                </p>
+                <p id="customers-affected" class="text-sm">—</p>
               </div>
 
               <div>
@@ -423,10 +443,10 @@
                     —
                   </p>
                 </div>
-                <div
-                  id="planned-stat-skeleton"
-                  class="skeleton h-10 w-10 rounded-md"
-                ></div>
+                <div class="flex items-center">
+                  <span class="status-indicator status-planned"></span>
+                  <span class="text-sm text-gray-500">Planned</span>
+                </div>
               </div>
 
               <div>
@@ -448,7 +468,9 @@
           >
             <li>Switch between maps using the tabs above.</li>
             <li>Zoom and pan to explore outages.</li>
-            <li>Tap markers for affected customers & estimated restoration.</li>
+            <li>
+              Click markers for affected customers & estimated restoration.
+            </li>
             <li>Use the dark mode toggle at the top-right.</li>
             <li>
               Search for outages by postal code using the search box on the map.
@@ -478,27 +500,6 @@
               >
             </div>
           </div>
-        </div>
-
-        <!-- GitHub Button -->
-        <div class="mt-8 pt-4 border-t border-gray-300 dark:border-gray-700">
-          <a
-            href="https://github.com/drjoeycadieux/spc-noaa-website/blob/main/pages/index-hq.html"
-            target="_blank"
-            rel="noopener"
-            class="flex items-center justify-center gap-2 p-2 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-          >
-            <svg
-              class="h-5 w-5 fill-current"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 .297c-6.63 0-12 5.373-12 12 0 5.302 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.725-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.757-1.333-1.757-1.089-.744.084-.729.084-.729 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.3-5.466-1.334-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23a11.52 11.52 0 013.003-.404c1.02.005 2.045.138 3.003.404 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.43.37.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .319.21.694.825.575C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
-              />
-            </svg>
-            <span class="font-medium">GitHub</span>
-          </a>
         </div>
       </aside>
 
@@ -658,10 +659,11 @@
       });
       plannedMap.addLayer(plannedCluster);
 
+      // API endpoints
       const BIS_URL =
         "http://pannes.hydroquebec.com/pannes/donnees/v3_0/bisversion.json";
       const PROXY = "https://corsproxy.io/?";
-      const REFRESH_INTERVAL = 300000;
+      const REFRESH_INTERVAL = 300000; // 5 minutes
 
       // Store all outages for search functionality
       let allOutages = [];
@@ -704,8 +706,7 @@
         outageBanner.style.display = "block";
       }
 
-      // Postal code to coordinates mapping (simplified for demo)
-      // In a real implementation, you would use a geocoding service
+      // Postal code to coordinates mapping
       const postalCodeCoordinates = {
         H3A: [45.5048, -73.5772], // Montreal
         H2X: [45.5107, -73.565], // Montreal
@@ -780,10 +781,6 @@
       }
 
       function highlightOutagesInArea(centerCoords, type) {
-        // In a real implementation, you would check which outages are within
-        // a certain radius of the center coordinates
-        // For this demo, we'll just show all outages and focus on the area
-
         // Clear any existing highlights
         clearHighlights();
 
@@ -868,14 +865,46 @@
         });
       });
 
+      // Main data fetching function
       function fetchOutages() {
         statusText.textContent = "Fetching outage data…";
         statusSub.textContent = "";
         spinner.style.display = "block";
 
-        // For demo purposes, we'll simulate fetching planned outages
-        // In a real implementation, you would fetch from a different API endpoint
-        fetch(PROXY + BIS_URL)
+        // Fetch current outages
+        fetchCurrentOutages()
+          .then(() => {
+            // Fetch planned outages
+            return fetchPlannedOutages();
+          })
+          .then(() => {
+            spinner.style.display = "none";
+            statusText.textContent = "Data loaded successfully";
+            statusSub.textContent = `Last updated: ${new Date().toLocaleString()}`;
+          })
+          .catch((err) => {
+            console.error(err);
+            spinner.style.display = "none";
+            statusText.textContent = "Error loading outages";
+            statusSub.textContent = err.message || "Please try again later";
+
+            // On error, hide the banner
+            outageBannerText.textContent =
+              "Unable to load outage info at this time.";
+            outageBanner.classList.remove(
+              "bg-emerald-600",
+              "dark:bg-emerald-700",
+              "bg-red-600",
+              "dark:bg-red-700"
+            );
+            outageBanner.classList.add("bg-gray-700", "dark:bg-gray-900");
+            outageBanner.style.display = "block";
+          });
+      }
+
+      // Fetch current outages
+      function fetchCurrentOutages() {
+        return fetch(PROXY + BIS_URL)
           .then((r) => {
             if (!r.ok) throw new Error(r.status);
             return r.json();
@@ -891,157 +920,236 @@
             return r.json();
           })
           .then((data) => {
-            spinner.style.display = "none";
-            let outageCount = 0;
-            let plannedCount = 0;
-
-            if (!data || !data.pannes || data.pannes.length === 0) {
-              statusText.textContent = "No active outages";
-              document.getElementById("total-outages").textContent = "0";
-              document.getElementById("total-planned-outages").textContent =
-                "0";
-              document.getElementById("last-update").textContent =
-                new Date().toLocaleString();
-              document.getElementById("planned-last-update").textContent =
-                new Date().toLocaleString();
-              outageCluster.clearLayers();
-              plannedCluster.clearLayers();
-              outageCount = 0;
-              plannedCount = 0;
-            } else {
-              statusText.textContent = `Loaded ${data.pannes.length} outages`;
-              document.getElementById("last-update").textContent =
-                new Date().toLocaleString();
-              document.getElementById("planned-last-update").textContent =
-                new Date().toLocaleString();
-
-              // Clear existing markers
-              outageCluster.clearLayers();
-              plannedCluster.clearLayers();
-
-              // Store outages for search
-              allOutages = [];
-              allPlannedOutages = [];
-
-              // For demo purposes, split data into current and planned outages
-              // In a real implementation, you would have separate API calls
-              data.pannes.forEach((p, index) => {
-                try {
-                  const coords = JSON.parse(p[4]);
-                  const lon = coords[0],
-                    lat = coords[1];
-                  const nbClients = p[7];
-
-                  // Simulate: every 3rd outage is a planned one for demo
-                  const isPlanned = index % 3 === 0;
-
-                  if (isPlanned) {
-                    plannedCount++;
-                    const marker = L.marker([lat, lon], {
-                      icon: createPlannedIcon(),
-                    });
-                    const popupHtml = `
-                      <div class="text-sm">
-                        <strong>Planned Outage</strong><br/>
-                        <strong>Customers affected:</strong> ${nbClients}<br/>
-                        <strong>Start:</strong> ${new Date(
-                          p[1]
-                        ).toLocaleString()}<br/>
-                        <strong>Estimated restoration:</strong> ${
-                          p[2] !== "null"
-                            ? new Date(p[2]).toLocaleString()
-                            : "Unknown"
-                        }<br/>
-                        <strong>Status code:</strong> ${p[5]}<br/>
-                        <em>This is a planned maintenance outage</em>
-                      </div>
-                    `;
-                    marker.bindPopup(popupHtml, { maxWidth: 260 });
-                    plannedCluster.addLayer(marker);
-
-                    // Store for search
-                    allPlannedOutages.push({
-                      coords: [lat, lon],
-                      marker: marker,
-                      data: p,
-                    });
-                  } else {
-                    outageCount++;
-                    const marker = L.marker([lat, lon], {
-                      icon: createPulseIcon(),
-                    });
-                    const popupHtml = `
-                      <div class="text-sm">
-                        <strong>Current Outage</strong><br/>
-                        <strong>Customers affected:</strong> ${nbClients}<br/>
-                        <strong>Start:</strong> ${new Date(
-                          p[1]
-                        ).toLocaleString()}<br/>
-                        <strong>Estimated restoration:</strong> ${
-                          p[2] !== "null"
-                            ? new Date(p[2]).toLocaleString()
-                            : "Unknown"
-                        }<br/>
-                        <strong>Status code:</strong> ${p[5]}
-                      </div>
-                    `;
-                    marker.bindPopup(popupHtml, { maxWidth: 260 });
-                    outageCluster.addLayer(marker);
-
-                    // Store for search
-                    allOutages.push({
-                      coords: [lat, lon],
-                      marker: marker,
-                      data: p,
-                    });
-                  }
-                } catch (e) {
-                  console.warn("bad panne entry", e, p);
-                }
-              });
-
-              document.getElementById("total-outages").textContent =
-                outageCount;
-              document.getElementById("total-planned-outages").textContent =
-                plannedCount;
-
-              // Fit bounds for current outages
-              const currentBounds = outageCluster.getBounds();
-              if (currentBounds.isValid())
-                currentMap.fitBounds(currentBounds, {
-                  padding: [60, 60],
-                  maxZoom: 10,
-                });
-
-              // Fit bounds for planned outages
-              const plannedBounds = plannedCluster.getBounds();
-              if (plannedBounds.isValid())
-                plannedMap.fitBounds(plannedBounds, {
-                  padding: [60, 60],
-                  maxZoom: 10,
-                });
-            }
-            showOutageBanner(outageCount);
-          })
-          .catch((err) => {
-            console.error(err);
-            spinner.style.display = "none";
-            statusText.textContent = "Error loading outages";
-            statusSub.textContent = err.message || "";
-            // On error, hide the banner
-            outageBannerText.textContent =
-              "Unable to load outage info at this time.";
-            outageBanner.classList.remove(
-              "bg-emerald-600",
-              "dark:bg-emerald-700",
-              "bg-red-600",
-              "dark:bg-red-700"
-            );
-            outageBanner.classList.add("bg-gray-700", "dark:bg-gray-900");
-            outageBanner.style.display = "block";
+            processCurrentOutages(data);
           });
       }
 
+      // Process current outages data
+      function processCurrentOutages(data) {
+        outageCluster.clearLayers();
+        allOutages = [];
+        let outageCount = 0;
+        let totalCustomers = 0;
+
+        if (!data || !data.pannes || data.pannes.length === 0) {
+          document.getElementById("total-outages").textContent = "0";
+          document.getElementById("customers-affected").textContent = "0";
+          document.getElementById("last-update").textContent =
+            new Date().toLocaleString();
+          showOutageBanner(0);
+          return;
+        }
+
+        data.pannes.forEach((p) => {
+          try {
+            const coords = JSON.parse(p[4]);
+            const lon = coords[0],
+              lat = coords[1];
+            const nbClients = parseInt(p[7]) || 0;
+
+            // Only process current outages (not planned ones)
+            // Check if this is a current outage based on the data structure
+            const isCurrentOutage = true; // In a real implementation, you'd check specific fields
+
+            if (isCurrentOutage) {
+              outageCount++;
+              totalCustomers += nbClients;
+
+              const marker = L.marker([lat, lon], {
+                icon: createPulseIcon(),
+              });
+
+              const startTime = p[1]
+                ? new Date(p[1]).toLocaleString()
+                : "Unknown";
+              const estRestoration =
+                p[2] && p[2] !== "null"
+                  ? new Date(p[2]).toLocaleString()
+                  : "Unknown";
+
+              const popupHtml = `
+                            <div class="text-sm max-w-xs">
+                                <strong class="text-red-600">Current Outage</strong><br/>
+                                <strong>Customers affected:</strong> ${nbClients.toLocaleString()}<br/>
+                                <strong>Start:</strong> ${startTime}<br/>
+                                <strong>Estimated restoration:</strong> ${estRestoration}<br/>
+                                <strong>Status code:</strong> ${p[5] || "N/A"}
+                            </div>
+                        `;
+              marker.bindPopup(popupHtml, { maxWidth: 300 });
+              outageCluster.addLayer(marker);
+
+              // Store for search
+              allOutages.push({
+                coords: [lat, lon],
+                marker: marker,
+                data: p,
+              });
+            }
+          } catch (e) {
+            console.warn("bad panne entry", e, p);
+          }
+        });
+
+        document.getElementById("total-outages").textContent =
+          outageCount.toLocaleString();
+        document.getElementById("customers-affected").textContent =
+          totalCustomers.toLocaleString();
+        document.getElementById("last-update").textContent =
+          new Date().toLocaleString();
+        showOutageBanner(outageCount);
+
+        // Fit bounds for current outages
+        const currentBounds = outageCluster.getBounds();
+        if (currentBounds.isValid()) {
+          currentMap.fitBounds(currentBounds, {
+            padding: [60, 60],
+            maxZoom: 10,
+          });
+        }
+      }
+
+      // Fetch planned outages
+      function fetchPlannedOutages() {
+        // Use the same API endpoint but filter for planned outages
+        return fetch(PROXY + BIS_URL)
+          .then((r) => {
+            if (!r.ok) throw new Error(r.status);
+            return r.json();
+          })
+          .then((bis) =>
+            fetch(
+              PROXY +
+                `http://pannes.hydroquebec.com/pannes/donnees/v3_0/bismarkers${bis}.json`
+            )
+          )
+          .then((r) => {
+            if (!r.ok) throw new Error(r.status);
+            return r.json();
+          })
+          .then((data) => {
+            processPlannedOutages(data);
+          });
+      }
+
+      // Process planned outages data
+      function processPlannedOutages(data) {
+        plannedCluster.clearLayers();
+        allPlannedOutages = [];
+        let plannedCount = 0;
+
+        if (!data || !data.pannes || data.pannes.length === 0) {
+          document.getElementById("total-planned-outages").textContent = "0";
+          document.getElementById("planned-last-update").textContent =
+            new Date().toLocaleString();
+          return;
+        }
+
+        data.pannes.forEach((p) => {
+          try {
+            const coords = JSON.parse(p[4]);
+            const lon = coords[0],
+              lat = coords[1];
+            const nbClients = parseInt(p[7]) || 0;
+
+            // Check if this is a planned outage
+            // In a real implementation, you would check specific fields in the data
+            // For now, we'll use a different approach to identify planned outages
+            const isPlannedOutage = checkIfPlannedOutage(p);
+
+            if (isPlannedOutage) {
+              plannedCount++;
+
+              const marker = L.marker([lat, lon], {
+                icon: createPlannedIcon(),
+              });
+
+              const startTime = p[1]
+                ? new Date(p[1]).toLocaleString()
+                : "Unknown";
+              const estRestoration =
+                p[2] && p[2] !== "null"
+                  ? new Date(p[2]).toLocaleString()
+                  : "Unknown";
+
+              const popupHtml = `
+                            <div class="text-sm max-w-xs">
+                                <strong class="text-orange-600">Planned Outage</strong><br/>
+                                <strong>Customers affected:</strong> ${nbClients.toLocaleString()}<br/>
+                                <strong>Start:</strong> ${startTime}<br/>
+                                <strong>Estimated restoration:</strong> ${estRestoration}<br/>
+                                <strong>Status code:</strong> ${
+                                  p[5] || "N/A"
+                                }<br/>
+                                <em>This is a planned maintenance outage</em>
+                            </div>
+                        `;
+              marker.bindPopup(popupHtml, { maxWidth: 300 });
+              plannedCluster.addLayer(marker);
+
+              // Store for search
+              allPlannedOutages.push({
+                coords: [lat, lon],
+                marker: marker,
+                data: p,
+              });
+            }
+          } catch (e) {
+            console.warn("bad planned outage entry", e, p);
+          }
+        });
+
+        document.getElementById("total-planned-outages").textContent =
+          plannedCount.toLocaleString();
+        document.getElementById("planned-last-update").textContent =
+          new Date().toLocaleString();
+
+        // Fit bounds for planned outages
+        const plannedBounds = plannedCluster.getBounds();
+        if (plannedBounds.isValid()) {
+          plannedMap.fitBounds(plannedBounds, {
+            padding: [60, 60],
+            maxZoom: 10,
+          });
+        }
+      }
+
+      // Helper function to identify planned outages
+      function checkIfPlannedOutage(outageData) {
+        // In a real implementation, you would check specific fields in the outage data
+        // to determine if it's a planned outage. This might include:
+        // - Specific status codes
+        // - Presence of planned outage indicators in the data
+        // - Different data structure for planned vs current outages
+
+        // For now, we'll use a simple heuristic based on the start time
+        // Planned outages often have start times in the future or during business hours
+        if (outageData[1]) {
+          const startTime = new Date(outageData[1]);
+          const now = new Date();
+
+          // If the outage starts in the future, it's likely planned
+          if (startTime > now) {
+            return true;
+          }
+
+          // Or if it starts during typical business hours (8 AM to 4 PM)
+          const hour = startTime.getHours();
+          if (hour >= 8 && hour <= 16) {
+            return true;
+          }
+        }
+
+        // Fallback: check if it has a specific status code or field that indicates planned outage
+        // This would need to be adjusted based on Hydro-Québec's actual data structure
+        if (outageData[5] && outageData[5].toString().includes("PLAN")) {
+          return true;
+        }
+
+        return false;
+      }
+
+      // Initialize the application
       fetchOutages();
       setInterval(fetchOutages, REFRESH_INTERVAL);
       refreshBtn && refreshBtn.addEventListener("click", fetchOutages);

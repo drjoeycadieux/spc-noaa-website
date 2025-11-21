@@ -1,11 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>Weather and Geomatics Alerts - SPC / NEXRAD / IGO / MSC</title>
     <meta
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <meta
+      name="description"
+      content="Interactive weather alerts map with SPC NOAA, NEXRAD radar, IGO Québec, and MSC CAP alerts"
     />
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -14,12 +18,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
       rel="stylesheet"
     />
 
     <style>
-      /* CSS Base */
+      /* CSS Reset and Base Styles */
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
         padding: 0;
@@ -27,40 +35,60 @@
         display: flex;
         flex-direction: column;
         height: 100vh;
-        /* Dark theme kept for the UI/Sidebar */
         background-color: #1e1e1e;
-        color: #cccccc;
+        color: #e0e0e0;
+        line-height: 1.5;
       }
 
       /* --- Header Style --- */
       header {
-        background-color: #333333;
+        background: linear-gradient(135deg, #2c3e50 0%, #1a2530 100%);
         color: white;
-        padding: 18px 30px;
-        font-size: 1.6em;
+        padding: 16px 30px;
+        font-size: 1.5em;
         font-weight: 700;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-        z-index: 10;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        border-bottom: 1px solid #34495e;
+      }
+
+      .header-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .header-title::before {
+        content: "🌪️";
+        font-size: 1.2em;
       }
 
       /* Header links container */
+      .header-links {
+        display: flex;
+        gap: 10px;
+      }
+
       .header-links a {
         color: white;
         text-decoration: none;
-        margin-left: 20px;
-        font-size: 0.85em;
-        padding: 8px 14px;
-        border: none;
+        padding: 8px 16px;
         border-radius: 6px;
-        transition: background-color 0.2s;
-        font-weight: 400;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        font-size: 0.85em;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background-color: rgba(255, 255, 255, 0.1);
       }
 
       .header-links a:hover {
-        background-color: #555555;
+        background-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
       }
 
       /* Main container */
@@ -68,64 +96,102 @@
         display: flex;
         flex: 1;
         position: relative;
+        overflow: hidden;
       }
 
       /* --- Sidebar Style --- */
       #sidebar {
-        width: 320px;
-        background-color: #2d2d2d;
+        width: 340px;
+        background: linear-gradient(to bottom, #2d2d2d, #252525);
         padding: 25px;
         overflow-y: auto;
-        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
-        z-index: 5;
-        border-right: none;
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+        z-index: 100;
+        border-right: 1px solid #444;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      /* Sidebar sections */
+      .sidebar-section {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 18px;
+        border: 1px solid #444;
       }
 
       /* Legend and titles style */
-      #sidebar h3,
-      #sidebar h4 {
-        margin-top: 0;
+      .sidebar-section h3 {
+        margin: 0 0 15px 0;
         color: #ffffff;
-        border-bottom: 1px solid #444444;
-        padding-bottom: 8px;
-        margin-bottom: 20px;
         font-weight: 700;
+        font-size: 1.2em;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #444;
+      }
+
+      .sidebar-section h4 {
+        margin: 0 0 12px 0;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 1.1em;
       }
 
       /* General list styles */
       #sidebar ul {
         padding-left: 20px;
-        margin: 10px 0 20px 0;
+        margin: 10px 0;
         font-size: 0.95em;
       }
 
-      /* Player Button Style (Toggle button removed) */
+      #sidebar li {
+        margin-bottom: 8px;
+        position: relative;
+      }
+
+      #sidebar li::before {
+        content: "▸";
+        position: absolute;
+        left: -15px;
+        color: #4caf50;
+      }
+
+      /* Player Button Style */
       #play-button {
-        background-color: #4caf50;
+        background: linear-gradient(to bottom, #4caf50, #388e3c);
         color: white;
         border: none;
-        padding: 12px 20px;
+        padding: 14px 20px;
         border-radius: 8px;
         cursor: pointer;
         font-size: 1.05em;
         font-weight: 700;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        transition: background-color 0.3s, transform 0.1s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
         width: 100%;
         margin-bottom: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
       }
 
       #play-button:disabled {
-        background-color: #555555;
+        background: #555555;
         cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
       }
 
       #play-button:hover:not(:disabled) {
-        background-color: #388e3c;
+        background: linear-gradient(to bottom, #388e3c, #2e7d32);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
       }
 
       #play-button:active:not(:disabled) {
-        transform: scale(0.98);
+        transform: translateY(0);
       }
 
       /* --- Map Style --- */
@@ -133,11 +199,19 @@
         flex: 1;
         position: relative;
       }
+
       /* Fix for Leaflet popups on dark background */
       .leaflet-popup-content-wrapper,
       .leaflet-popup-tip {
         background: #333333;
-        color: #cccccc;
+        color: #e0e0e0;
+        box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+      }
+
+      .leaflet-popup-content {
+        font-family: "Roboto", sans-serif;
+        font-size: 0.95em;
+        line-height: 1.5;
       }
 
       /* Legend styles for SPC alerts */
@@ -147,44 +221,47 @@
         margin-bottom: 12px;
         font-size: 0.95em;
       }
+
       .legend-color {
-        width: 25px;
-        height: 25px;
+        width: 28px;
+        height: 28px;
         margin-right: 15px;
-        border: 2px solid #000;
-        opacity: 0.7;
+        border: 2px solid rgba(255, 255, 255, 0.7);
+        opacity: 0.9;
         border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
 
-      /* Style for the HQ outage marker in legend (Circle) - REMOVED */
-      /* .legend-circle {
-        width: 25px;
-        height: 25px;
-        margin-right: 15px;
-        border: 2px solid #fff; 
-        background-color: #ff4500; 
-        opacity: 0.9;
-        border-radius: 50%; 
-        display: inline-block;
-        box-shadow: 0 0 5px rgba(255, 69, 0, 0.5);
-      } */
+      .legend-label {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .risk-level {
+        font-weight: 700;
+      }
+
+      .risk-code {
+        font-size: 0.85em;
+        opacity: 0.8;
+      }
 
       /* Horizontal separator style */
       hr {
         border: 0;
-        border-top: 1px solid #444444;
+        border-top: 1px solid #444;
         margin: 20px 0;
       }
 
       /* --- Footer Style --- */
       footer {
-        background-color: #333333;
-        color: #ffffff;
-        padding: 12px 30px;
+        background: linear-gradient(135deg, #2c3e50 0%, #1a2530 100%);
+        color: #e0e0e0;
+        padding: 14px 30px;
         text-align: center;
-        font-size: 0.8em;
+        font-size: 0.85em;
         flex-shrink: 0;
-        border-top: 1px solid #444444;
+        border-top: 1px solid #34495e;
       }
 
       /* --- Loading Spinner Styles --- */
@@ -194,27 +271,28 @@
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 100;
-        background-color: rgba(30, 30, 30, 0.95);
+        z-index: 1000;
+        background: linear-gradient(135deg, #1a2530 0%, #2c3e50 100%);
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         color: white;
         font-size: 1.2em;
-        font-weight: 400;
-        transition: opacity 0.3s;
+        font-weight: 500;
+        transition: opacity 0.5s ease;
       }
 
-      /* The actual spinner CSS (using border trick) */
+      /* The actual spinner CSS */
       .spinner {
-        border: 8px solid #444444;
+        border: 8px solid rgba(255, 255, 255, 0.2);
         border-top: 8px solid #4caf50;
         border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        animation: spin 1s linear infinite;
-        margin-bottom: 20px;
+        width: 60px;
+        height: 60px;
+        animation: spin 1.2s linear infinite;
+        margin-bottom: 25px;
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
       }
 
       @keyframes spin {
@@ -226,6 +304,76 @@
         }
       }
 
+      .loading-text {
+        text-align: center;
+        max-width: 300px;
+      }
+
+      /* Status indicators */
+      .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-active {
+        background-color: #4caf50;
+        box-shadow: 0 0 8px #4caf50;
+      }
+
+      .status-inactive {
+        background-color: #f44336;
+      }
+
+      .status-loading {
+        background-color: #ffc107;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 0.5;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.5;
+        }
+      }
+
+      /* Time display */
+      #time-display {
+        margin-top: 15px;
+        font-weight: 700;
+        color: #e0e0e0;
+        text-align: center;
+        padding: 10px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        border: 1px solid #444;
+      }
+
+      /* Layer controls */
+      .layer-control {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .layer-control input {
+        margin-right: 10px;
+      }
+
+      .layer-control label {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        cursor: pointer;
+      }
+
       /* --- Media Query for Mobile/Small Screens (max 768px) --- */
       @media (max-width: 768px) {
         #main-container {
@@ -233,42 +381,71 @@
         }
 
         header {
-          padding: 15px 20px;
-          font-size: 1.4em;
-          display: block;
+          padding: 14px 20px;
+          font-size: 1.3em;
+          flex-direction: column;
+          gap: 10px;
           text-align: center;
         }
+
         .header-links {
-          display: none;
+          width: 100%;
+          justify-content: center;
         }
 
         #sidebar {
-          width: auto;
+          width: 100%;
           padding: 20px;
           height: auto;
+          max-height: 40vh;
           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-          border-bottom: 1px solid #444444;
+          border-bottom: 1px solid #444;
           order: -1;
         }
 
         #map {
           height: 60vh;
         }
+
+        .sidebar-section {
+          padding: 15px;
+        }
+      }
+
+      /* Additional small screen adjustments */
+      @media (max-width: 480px) {
+        header {
+          font-size: 1.1em;
+          padding: 12px 15px;
+        }
+
+        .header-links a {
+          padding: 6px 12px;
+          font-size: 0.8em;
+        }
+
+        #sidebar {
+          padding: 15px;
+        }
+
+        .sidebar-section {
+          padding: 12px;
+        }
       }
     </style>
   </head>
   <body>
     <header>
-      <div>Weather and Geomatics Alerts - SPC / NEXRAD / IGO / **MSC**</div>
-
+      <div class="header-title">Weather and Geomatics Alerts</div>
       <div class="header-links">
         <a
           href="https://github.com/drjoeycadieux/spc-noaa-website"
           target="_blank"
+          rel="noopener"
         >
           <span role="img" aria-label="GitHub">🐙</span> GitHub
         </a>
-        <a href="https://x.com/drjoeycadieux" target="_blank">
+        <a href="https://x.com/drjoeycadieux" target="_blank" rel="noopener">
           <span role="img" aria-label="X">🐦‍⬛</span> X
         </a>
       </div>
@@ -276,75 +453,110 @@
 
     <div id="main-container">
       <aside id="sidebar">
-        <h3>SPC Alerts Legend</h3>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: #ffff00"></div>
-          <span>1 - Marginal Risk</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: #ffa500"></div>
-          <span>2 - Slight Risk</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: #ff4500"></div>
-          <span>3 - Enhanced / Moderate Risk</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: #ff0000"></div>
-          <span>4 - High Risk</span>
+        <div class="sidebar-section">
+          <h3>SPC Convective Outlook</h3>
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #005500"></div>
+            <div class="legend-label">
+              <span class="risk-level">Marginal Risk</span>
+              <span class="risk-code">(MRGL)</span>
+            </div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #ddaa00"></div>
+            <div class="legend-label">
+              <span class="risk-level">Slight Risk</span>
+              <span class="risk-code">(SLGT)</span>
+            </div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #ff6600"></div>
+            <div class="legend-label">
+              <span class="risk-level">Enhanced Risk</span>
+              <span class="risk-code">(ENH)</span>
+            </div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #cc0000"></div>
+            <div class="legend-label">
+              <span class="risk-level">Moderate Risk</span>
+              <span class="risk-code">(MDT)</span>
+            </div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: #cc00cc"></div>
+            <div class="legend-label">
+              <span class="risk-level">High Risk</span>
+              <span class="risk-code">(HIGH)</span>
+            </div>
+          </div>
         </div>
 
-        <hr />
+        <div class="sidebar-section">
+          <h4>Active Layers</h4>
+          <ul id="active-layers-list">
+            <li>
+              <span class="status-indicator status-active"></span>IGO Historical
+              Events (GeoJSON)
+            </li>
+            <li>
+              <span class="status-indicator status-active"></span>NEXRAD Radar
+              (Tile Layer)
+            </li>
+            <li id="spc-layer-status">
+              <span class="status-indicator status-loading"></span>SPC NOAA
+              Forecasts (GeoJSON)
+            </li>
+            <li>
+              <span class="status-indicator status-active"></span>Hydro-Quebec
+              <a
+                style="color: #4caf50; text-decoration: none; font-weight: 500"
+                href="/pages/index-hq.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Outages Map</a
+              >
+            </li>
+          </ul>
+        </div>
 
-        <h4>Active Layers</h4>
-        <ul id="active-layers-list">
-          <li>IGO Historical Events (GeoJSON)</li>
-          <li>NEXRAD Radar (Tile Layer)</li>
-          <li id="spc-layer-status">SPC NOAA Forecasts (GeoJSON)</li>
-          <li>
-            Hydro-Quebec
-            <a
-              style="
-                color: white;
-                font-family: 'Gill Sans', 'Gill Sans MT', Calibri,
-                  'Trebuchet MS', sans-serif;
-              "
-              href="/pages/index-hq.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              >Outages Map
-            </a>
-          </li>
-        </ul>
+        <div class="sidebar-section">
+          <h4>Data Controls</h4>
+          <button id="play-button" disabled>
+            <span id="play-icon">▶️</span>
+            <span id="play-text">Start Animation</span>
+          </button>
+          <div id="time-display">Time: Static</div>
+        </div>
 
-        <hr />
-
-        <h4>Data Controls</h4>
-        <button id="play-button" disabled>▶️ Start Animation</button>
-        <div
-          id="time-display"
-          style="
-            margin-top: 15px;
-            font-weight: 700;
-            color: #cccccc;
-            text-align: center;
-          "
-        >
-          Time: Static
+        <div class="sidebar-section">
+          <h4>Layer Controls</h4>
+          <div class="layer-control">
+            <input type="checkbox" id="spc-toggle" checked />
+            <label for="spc-toggle">SPC Outlook</label>
+          </div>
+          <div class="layer-control">
+            <input type="checkbox" id="radar-toggle" checked />
+            <label for="radar-toggle">NEXRAD Radar</label>
+          </div>
+          <div class="layer-control">
+            <input type="checkbox" id="igo-toggle" checked />
+            <label for="igo-toggle">IGO Events</label>
+          </div>
         </div>
       </aside>
 
       <div id="map">
         <div id="loading-overlay">
           <div class="spinner"></div>
-          Loading Map and Weather Data...
+          <div class="loading-text">Loading Map and Weather Data...</div>
         </div>
       </div>
     </div>
 
     <footer>
-      **Map and Data Sources** | &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO
-      Québec (MSP), **MSC CAP**. For educational and non-commercial use.
+      <strong>Map and Data Sources</strong> | &copy; 2025 | Sources: SPC NOAA,
+      NEXRAD, IGO Québec (MSP), MSC CAP. For educational and non-commercial use.
     </footer>
 
     <script>
@@ -363,6 +575,8 @@
       // Layer References
       let spcLayer = null;
       let capLayer = null;
+      let igoLayer = null;
+      let radarLayer = null;
       let animationInterval = null;
       let isPlaying = false;
       let currentBaseLayer = null;
@@ -373,10 +587,16 @@
       // DOM Elements
       const loadingOverlay = document.getElementById("loading-overlay");
       const playButton = document.getElementById("play-button");
+      const playIcon = document.getElementById("play-icon");
+      const playText = document.getElementById("play-text");
       const timeDisplay = document.getElementById("time-display");
       const spcStatus = document.getElementById("spc-layer-status");
-      const baseMapStatus = document.getElementById("base-map-status");
       const activeLayersList = document.getElementById("active-layers-list");
+
+      // Layer toggle controls
+      const spcToggle = document.getElementById("spc-toggle");
+      const radarToggle = document.getElementById("radar-toggle");
+      const igoToggle = document.getElementById("igo-toggle");
 
       // Tile Layer Definitions
       const baseMaps = {
@@ -391,19 +611,21 @@
         ),
       };
 
-      // Color mapping function for SPC
+      // CORRECTED color mapping function for SPC
       const spcColors = (dn) => {
         switch (dn) {
           case 1:
-            return "#FFFF00";
+            return "#005500"; // Marginal - Dark Green
           case 2:
-            return "#FFA500";
+            return "#DDAA00"; // Slight - Gold/Yellow
           case 3:
-            return "#FF4500";
+            return "#FF6600"; // Enhanced - Orange
           case 4:
-            return "#FF0000";
+            return "#CC0000"; // Moderate - Red
+          case 5:
+            return "#CC00CC"; // High - Magenta
           default:
-            return "#CCCCCC";
+            return "#CCCCCC"; // Default for any unexpected values
         }
       };
 
@@ -433,15 +655,13 @@
           .attribution({
             position: "bottomright",
             prefix:
-              " &copy; 2025 | Sources : SPC NOAA, NEXRAD, IGO Québec (MSP), MSC CAP Alert. For educational and non-commercial use.",
+              " &copy; 2025 | Sources: SPC NOAA, NEXRAD, IGO Québec (MSP), MSC CAP Alert. For educational and non-commercial use.",
           })
           .addTo(map);
 
         // Initialize with the Light Map
         currentBaseLayer = baseMaps.light;
         currentBaseLayer.addTo(map);
-        // Note: baseMapStatus is not defined in the provided HTML, assuming it's for internal use.
-        // baseMapStatus.textContent = "**OSM Standard Base Map**";
 
         map.whenReady(function () {
           this.invalidateSize();
@@ -524,10 +744,9 @@
         const capGeoJson = capXmlToGeoJSON(capXmlString);
 
         if (!capGeoJson) {
-          // Changed to use cap status element
           // Appending a new list item for the CAP status since it's an optional layer
           const newCapStatusLi = document.createElement("li");
-          newCapStatusLi.innerHTML = `**MSC CAP Alert:** FAILED to load or parse sample.`;
+          newCapStatusLi.innerHTML = `<span class="status-indicator status-inactive"></span>MSC CAP Alert: FAILED to load or parse sample.`;
           activeLayersList.appendChild(newCapStatusLi);
           return;
         }
@@ -553,22 +772,22 @@
           onEachFeature: function (feature, layer) {
             const properties = feature.properties;
             const popupContent = `
-                      <h4 style="margin: 0; color: ${capColors(
-                        properties.severity
-                      )};">${properties.event}</h4>
-                      <strong>Headline:</strong> ${properties.headline}<br>
-                      <strong>Severity:</strong> ${properties.severity}<br>
-                      <strong>Expires:</strong> ${
-                        properties.expires
-                          ? new Date(properties.expires).toLocaleString()
-                          : "N/A"
-                      }<br>
-                      <hr style="border-color: #555;">
-                      <p style="margin: 5px 0 0 0;">${properties.description.substring(
-                        0,
-                        300
-                      )}...</p>
-                    `;
+              <h4 style="margin: 0; color: ${capColors(
+                properties.severity
+              )};">${properties.event}</h4>
+              <strong>Headline:</strong> ${properties.headline}<br>
+              <strong>Severity:</strong> ${properties.severity}<br>
+              <strong>Expires:</strong> ${
+                properties.expires
+                  ? new Date(properties.expires).toLocaleString()
+                  : "N/A"
+              }<br>
+              <hr style="border-color: #555;">
+              <p style="margin: 5px 0 0 0;">${properties.description.substring(
+                0,
+                300
+              )}...</p>
+            `;
             layer.bindPopup(popupContent);
             layer.on("click", () => {
               map.fitBounds(layer.getBounds(), { padding: [50, 50] });
@@ -578,21 +797,11 @@
 
         // Update Layer Status
         const newCapStatusLi = document.createElement("li");
-        newCapStatusLi.innerHTML = `**MSC CAP Alert:** ${capGeoJson.properties.headline} (**${capGeoJson.properties.severity}**)`;
+        newCapStatusLi.innerHTML = `<span class="status-indicator status-active"></span>MSC CAP Alert: ${capGeoJson.properties.headline} (${capGeoJson.properties.severity})`;
         activeLayersList.appendChild(newCapStatusLi);
 
         console.log("CAP Alert successfully loaded and added to map.");
       }
-
-      // ----------------------------------------------------------------
-      // Hydro-Québec Layer Function REMOVED
-      // ----------------------------------------------------------------
-      // const hydroQuebecApiUrl =
-      //   "https://corsproxy.io/?https://pannes.hydroquebec.com/pannes/donnees/v3_0/bisversion.json";
-
-      // function loadHydroQuebecOutages() {
-      //  ... all HQ logic removed ...
-      // }
 
       // ----------------------------------------------------------------
       // Layer Loading Functions (IGO, NEXRAD, SPC)
@@ -621,7 +830,7 @@
             return response.json();
           })
           .then((data) => {
-            L.geoJSON(data, {
+            igoLayer = L.geoJSON(data, {
               pointToLayer: function (feature, latlng) {
                 return L.circleMarker(latlng, {
                   radius: 6,
@@ -649,10 +858,20 @@
                 layer.bindPopup(description);
               },
             }).addTo(map);
+
+            // Set up toggle functionality
+            igoToggle.addEventListener("change", function () {
+              if (igoToggle.checked) {
+                map.addLayer(igoLayer);
+              } else {
+                map.removeLayer(igoLayer);
+              }
+            });
           })
-          .catch((error) =>
-            console.error("Error loading IGO historical events:", error)
-          );
+          .catch((error) => {
+            console.error("Error loading IGO historical events:", error);
+            document.querySelector("#igo-toggle").disabled = true;
+          });
       }
 
       function loadWeatherLayers() {
@@ -660,12 +879,21 @@
         const radarTileUrl =
           "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png";
 
-        L.tileLayer(radarTileUrl, {
+        radarLayer = L.tileLayer(radarTileUrl, {
           attribution:
             'Radar: NEXRAD via <a href="https://mesonet.agron.iastate.edu/" target="_blank">Iowa State Mesonet</a>',
           opacity: 0.8,
           maxZoom: 12,
         }).addTo(map);
+
+        // Set up toggle functionality
+        radarToggle.addEventListener("change", function () {
+          if (radarToggle.checked) {
+            map.addLayer(radarLayer);
+          } else {
+            map.removeLayer(radarLayer);
+          }
+        });
 
         // SPC NOAA Layer (GeoJSON)
         fetch(
@@ -704,17 +932,28 @@
               },
             }).addTo(map);
 
+            // Set up toggle functionality
+            spcToggle.addEventListener("change", function () {
+              if (spcToggle.checked) {
+                map.addLayer(spcLayer);
+              } else {
+                map.removeLayer(spcLayer);
+              }
+            });
+
             // ENABLE animation only if SPC data loads successfully
             playButton.disabled = false;
-            spcStatus.textContent = "SPC NOAA Forecasts (GeoJSON) - Loaded";
+            spcStatus.innerHTML =
+              '<span class="status-indicator status-active"></span>SPC NOAA Forecasts (GeoJSON) - Loaded';
           })
           .catch((error) => {
             console.error(
               "Error loading SPC data (animation disabled):",
               error
             );
-            spcStatus.textContent =
-              "SPC NOAA Forecasts (GeoJSON) - FAILED to load";
+            spcStatus.innerHTML =
+              '<span class="status-indicator status-inactive"></span>SPC NOAA Forecasts (GeoJSON) - FAILED to load';
+            spcToggle.disabled = true;
           });
       }
 
@@ -731,12 +970,14 @@
         if (isPlaying) {
           clearInterval(animationInterval);
           isPlaying = false;
-          playButton.innerHTML = "▶️ Start Animation";
+          playIcon.textContent = "▶️";
+          playText.textContent = "Start Animation";
           timeDisplay.textContent = "Time: Static";
           spcLayer.setStyle({ fillOpacity: 0.6 });
         } else {
           isPlaying = true;
-          playButton.innerHTML = "⏸️ Stop Animation";
+          playIcon.textContent = "⏸️";
+          playText.textContent = "Stop Animation";
 
           animationInterval = setInterval(() => {
             currentStepIndex = (currentStepIndex + 1) % animationSteps.length;
@@ -762,40 +1003,39 @@
         setupMap();
         loadIgoLayers();
         loadWeatherLayers();
-        // loadHydroQuebecOutages(); // REMOVED
 
         // --- MSC CAP ALERT DATA LOADING ---
         const capAlertUrl = "T_WWCN11_C_CWVR_202511190220_1187808547.cap";
 
         // Placeholder CAP-XML string (used if fetch fails)
         const sampleCapXml = `
-                <?xml version="1.0" encoding="UTF-8"?>
-                <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
-                <identifier>MSC-Alert-SAMPLE-4321</identifier>
-                <sender>CWTO</sender>
-                <sent>2025-11-19T06:00:00-05:00</sent>
-                <status>Actual</status>
-                <msgType>Alert</msgType>
-                <scope>Public</scope>
-                <info>
-                    <language>en-CA</language>
-                    <category>Met</category>
-                    <event>Severe Thunderstorm Warning</event>
-                    <responseType>Shelter</responseType>
-                    <urgency>Immediate</urgency>
-                    <severity>Severe</severity>
-                    <certainty>Observed</certainty>
-                    <effective>2025-11-19T06:00:00-05:00</effective>
-                    <expires>2025-11-19T08:00:00-05:00</expires>
-                    <headline>SAMPLE: Severe Thunderstorm Warning for Southern Quebec</headline>
-                    <description>Conditions are favourable for the development of dangerous thunderstorms that may be capable of producing large hail, damaging winds, and heavy rain. Take shelter immediately (This is sample data).</description>
-                    <area>
-                    <areaDesc>Montreal - Laval - Longueuil Region (SAMPLE)</areaDesc>
-                    <polygon>45.5017,-73.5673 45.4583,-73.9400 45.6983,-73.7433 45.8167,-73.2733 45.5017,-73.5673</polygon>
-                    </area>
-                </info>
-                </alert>
-            `;
+          <?xml version="1.0" encoding="UTF-8"?>
+          <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+          <identifier>MSC-Alert-SAMPLE-4321</identifier>
+          <sender>CWTO</sender>
+          <sent>2025-11-19T06:00:00-05:00</sent>
+          <status>Actual</status>
+          <msgType>Alert</msgType>
+          <scope>Public</scope>
+          <info>
+              <language>en-CA</language>
+              <category>Met</category>
+              <event>Severe Thunderstorm Warning</event>
+              <responseType>Shelter</responseType>
+              <urgency>Immediate</urgency>
+              <severity>Severe</severity>
+              <certainty>Observed</certainty>
+              <effective>2025-11-19T06:00:00-05:00</effective>
+              <expires>2025-11-19T08:00:00-05:00</expires>
+              <headline>SAMPLE: Severe Thunderstorm Warning for Southern Quebec</headline>
+              <description>Conditions are favourable for the development of dangerous thunderstorms that may be capable of producing large hail, damaging winds, and heavy rain. Take shelter immediately (This is sample data).</description>
+              <area>
+              <areaDesc>Montreal - Laval - Longueuil Region (SAMPLE)</areaDesc>
+              <polygon>45.5017,-73.5673 45.4583,-73.9400 45.6983,-73.7433 45.8167,-73.2733 45.5017,-73.5673</polygon>
+              </area>
+          </info>
+          </alert>
+        `;
 
         // Attempt to fetch the file
         fetch(capAlertUrl)
@@ -818,15 +1058,14 @@
 
         // Event listeners
         playButton.addEventListener("click", toggleAnimation);
-        // Toggle map event listener removed
 
         // Hide loading spinner
         setTimeout(() => {
           loadingOverlay.style.opacity = "0";
           setTimeout(() => {
             loadingOverlay.style.display = "none";
-          }, 300);
-        }, 500);
+          }, 500);
+        }, 1000);
       });
     </script>
   </body>
