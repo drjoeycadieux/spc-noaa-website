@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live NEXRAD Radar | Responsive Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+
+      /* Header */
+      header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background: rgba(7, 16, 40, 0.9);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 10px;
+        font-weight: bold;
+        z-index: 1000;
+      }
+
+      header button {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        padding: 6px 12px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-weight: normal;
+      }
+
+      /* Footer */
+      footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 40px;
+        background: rgba(7, 16, 40, 0.9);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        z-index: 1000;
+      }
+
+      /* Sidebar */
+      #sidebar {
+        position: absolute;
+        top: 60px;
+        bottom: 40px;
+        left: 0;
+        width: 250px;
+        background: rgba(7, 16, 40, 0.95);
+        color: #fff;
+        padding: 15px;
+        overflow-y: auto;
+        z-index: 1002;
+        transition: transform 0.3s ease;
+      }
+
+      #sidebar.collapsed {
+        transform: translateX(-250px);
+      }
+
+      /* Map */
+      #map {
+        position: absolute;
+        top: 60px;
+        bottom: 40px;
+        left: 250px;
+        right: 0;
+        transition: left 0.3s ease;
+      }
+
+      #map.expanded {
+        left: 0;
+      }
+
+      /* Legend top-right */
+      .legend {
+        position: absolute;
+        top: 70px;
+        right: 10px;
+        padding: 8px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        font-size: 14px;
+        border-radius: 6px;
+        z-index: 1001;
+      }
+
+      /* Scrollbar for sidebar */
+      #sidebar::-webkit-scrollbar {
+        width: 6px;
+      }
+      #sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 3px;
+      }
+
+      /* Mobile Responsive */
+      @media (max-width: 768px) {
+        #sidebar {
+          width: 200px;
+          transform: translateX(-200px); /* hide by default on mobile */
+        }
+        #sidebar.collapsed {
+          transform: translateX(-200px);
+        }
+        #map {
+          left: 0;
+        }
+        #map.expanded {
+          left: 0;
+        }
+        .legend {
+          top: 80px;
+          right: 10px;
+          font-size: 12px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        header {
+          flex-direction: column;
+          height: auto;
+          padding: 5px 10px;
+          gap: 5px;
+        }
+        header button {
+          width: 100%;
+        }
+        .legend {
+          font-size: 11px;
+          top: 90px;
+          right: 5px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      Storm Ready | Info Map
+      <button id="toggleSidebar">Toggle Sidebar</button>
+    </header>
+
+    <div id="sidebar">
+      <h3>Storm Alerts</h3>
+      <p>No current alerts.</p>
+      <hr />
+      <h3>Controls</h3>
+      <p>Add buttons or filters here.</p>
+    </div>
+
+    <div id="map"></div>
+
+    <footer>In Beta Open. Developed By Joey Cadieux. 2025</footer>
+
+    <div class="legend">
+      <strong>Reflectivity (dBZ)</strong><br />
+      <span style="color: #00ff00">■</span> Light<br />
+      <span style="color: #ffff00">■</span> Moderate<br />
+      <span style="color: #ff0000">■</span> Heavy<br />
+    </div>
+
+    <script>
+      // --- Leaflet Map ---
+      const map = L.map("map").setView([39.5, -98.5], 4);
+
+      // Base map
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "Storm Ready. 2025",
+      }).addTo(map);
+
+      // NEXRAD N0Q overlay (live)
+      const nexradLayer = L.tileLayer(
+        "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q/{z}/{x}/{y}.png",
+        {
+          attribution: "Developed By Joey Cadieux",
+          opacity: 0.6,
+          zIndex: 10,
+          continuousWorld: true,
+        }
+      ).addTo(map);
+
+      // Auto-refresh every 5 minutes
+      setInterval(() => {
+        nexradLayer.setUrl(
+          "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q/{z}/{x}/{y}.png?ts=" +
+            new Date().getTime()
+        );
+      }, 300000);
+
+      // --- Sidebar toggle ---
+      const toggleBtn = document.getElementById("toggleSidebar");
+      const sidebar = document.getElementById("sidebar");
+      const mapDiv = document.getElementById("map");
+
+      toggleBtn.addEventListener("click", () => {
+        sidebar.classList.toggle("collapsed");
+        mapDiv.classList.toggle("expanded");
+      });
+    </script>
+  </body>
+</html>
